@@ -99,4 +99,18 @@ public class PlayerController : NetworkBehaviour
         if (!IsServer) return;
         ControlsFlipped.Value = flipped;
     }
+
+
+    public void Die()
+{
+    if (!IsOwner) return;
+    RespawnServerRpc();
+}
+
+[ServerRpc]
+private void RespawnServerRpc()
+{
+    transform.position = spawnPoint;
+    rb.linearVelocity  = Vector2.zero;
+}
 }
