@@ -45,9 +45,9 @@
             ],
             "bindings": [
                 {
-                    "name": "1D Axis",
+                    "name": "WASD",
                     "id": "ac6326ae-a46f-4253-86be-b71bd8422cc4",
-                    "path": "1DAxis",
+                    "path": "2DVector",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -56,8 +56,8 @@
                     "isPartOfComposite": false
                 },
                 {
-                    "name": "negative",
-                    "id": "8fa96bc7-a4bb-4500-9c14-889cc7d16442",
+                    "name": "Left",
+                    "id": "864b242e-7a7b-4e9a-bb3d-010199137770",
                     "path": "<Keyboard>/a",
                     "interactions": "",
                     "processors": "",
@@ -67,8 +67,8 @@
                     "isPartOfComposite": true
                 },
                 {
-                    "name": "positive",
-                    "id": "0bd970b0-0254-4af4-9b5b-21ebc9bf262e",
+                    "name": "Right",
+                    "id": "6e88b1fd-b6f9-4828-9a2d-f5605c51fa3b",
                     "path": "<Keyboard>/d",
                     "interactions": "",
                     "processors": "",
