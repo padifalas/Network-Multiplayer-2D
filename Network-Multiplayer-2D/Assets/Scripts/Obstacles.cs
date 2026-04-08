@@ -10,36 +10,35 @@ public class Obstacle : NetworkBehaviour
     [SerializeField] private ObstacleType obstacleType;
 
     [Header("Fire Settings")]
-    [SerializeField] private float fireExpandScale  = 2.5f;
+    [SerializeField] private float fireExpandScale = 2.5f;
     [SerializeField] private float fireExpandSpeed = 3f;
-    [SerializeField] private float fireDetectRadius= 3f;
+    [SerializeField] private float fireDetectRadius = 3f;
 
     [Header("Sink Settings")]
-    [SerializeField] private float sinkSpeed  = 2f;
+    [SerializeField] private float sinkSpeed = 2f;
     [SerializeField] private float sinkDetectRadius = 2f;
-    [SerializeField] private float sinkResetDelay  = 2f;
+    [SerializeField] private float sinkResetDelay = 2f;
 
-    [Header("Teleporting Wall Settings")]
-    [SerializeField] private float wallMoveSpeed  = 8f;
-    [SerializeField] private float wallTriggerRadius  = 6f;
+    [Header("Pushing Wall Settings")]
+    [SerializeField] private float wallMoveSpeed = 8f;
+    [SerializeField] private float wallChargeDelay= 0.3f;
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem obstacleParticles;
 
-
     private Vector3 originPosition;
     private Vector3 originScale;
-    private bool isActive;
 
     // fire
     private bool isExpanded;
 
     // sink
     private bool isSinking;
-    private Coroutine sinkResetCoroutine;
+    private Coroutine  sinkResetCoroutine;
 
     // wall
     private bool isCharging;
+    private bool wallUsed;
     private Transform  wallTarget;
 
 
@@ -47,6 +46,10 @@ public class Obstacle : NetworkBehaviour
     {
         originPosition = transform.position;
         originScale = transform.localScale;
+
+        
+        if (obstacleType == ObstacleType.TeleportingWall)
+            SetWallVisible(false);
     }
 
     private void Update()
@@ -55,23 +58,14 @@ public class Obstacle : NetworkBehaviour
 
         switch (obstacleType)
         {
-            case ObstacleType.Fire:          
-            HandleFire();          
-            break;
-
-            case ObstacleType.Sink:          
-            HandleSink();          
-            break;
-
-            case ObstacleType.TeleportingWall: 
-            HandleWall();        
-            break;
+            case ObstacleType.Fire: HandleFire(); break;
+            case ObstacleType.Sink: HandleSink(); break;
+            case ObstacleType.TeleportingWall: HandleWall(); break;
         }
     }
 
 
-//   fire
-    // expands toward  player within  radius
+    //fire behabiour
 
     private void HandleFire()
     {
@@ -79,12 +73,12 @@ public class Obstacle : NetworkBehaviour
 
         if (nearest != null)
         {
-            float target = fireExpandScale;
             transform.localScale = Vector3.Lerp(
                 transform.localScale,
-                originScale * target,
+                originScale * fireExpandScale,
                 Time.deltaTime * fireExpandSpeed);
-                SyncParticlesClientRpc(true);
+
+            SyncParticlesClientRpc(true);
         }
         else
         {
@@ -92,13 +86,13 @@ public class Obstacle : NetworkBehaviour
                 transform.localScale,
                 originScale,
                 Time.deltaTime * fireExpandSpeed);
-                SyncParticlesClientRpc(false);
+
+            SyncParticlesClientRpc(false);
         }
     }
 
 
-    // sink platform things
-    // Sinks downward when a player is close, resets after delay
+    //sinking platform behaviour - sinks down when player is near, then resets after a delay
 
     private void HandleSink()
     {
@@ -106,7 +100,7 @@ public class Obstacle : NetworkBehaviour
 
         if (nearest != null && !isSinking)
         {
-            isSinking = true;
+            isSinking          = true;
             if (sinkResetCoroutine != null) StopCoroutine(sinkResetCoroutine);
             sinkResetCoroutine = StartCoroutine(SinkRoutine());
         }
@@ -130,59 +124,48 @@ public class Obstacle : NetworkBehaviour
         }
 
         transform.position = originPosition;
-        isSinking = false;
+        isSinking          = false;
     }
 
 
-    // push wall
-    // shows up n rushs  to the nearest player, pushing them
+    // pushing wall
+    
 
-    private void HandleWall()
+private void HandleWall()
+{
+    if (!isCharging || wallTarget == null) return;
+
+  
+    Vector3 target = new Vector3(wallTarget.position.x, originPosition.y, 0f);
+
+    transform.position = Vector3.MoveTowards(
+        transform.position,
+        target,
+        wallMoveSpeed * Time.deltaTime);
+
+    SyncWallPositionClientRpc(transform.position);
+
+    if (Vector3.Distance(transform.position, target) < 0.3f)
     {
-        if (isCharging && wallTarget != null)
-        {
-            transform.position = Vector3.MoveTowards(
-                transform.position,
-                wallTarget.position,
-                wallMoveSpeed * Time.deltaTime);
-
-            if (Vector3.Distance(transform.position, wallTarget.position) < 0.5f)
-            {
-                isCharging = false;
-                wallTarget = null;
-                StartCoroutine(ResetWallRoutine());
-            }
-            return;
-        }
-
-        if (!isCharging)
-        {
-            PlayerController nearest = GetNearestPlayer(wallTriggerRadius);
-            if (nearest != null)
-            {
-                wallTarget = nearest.transform;
-                isCharging = true;
-            }
-        }
+        isCharging = false;
+        wallTarget = null;
+        StartCoroutine(ResetWallRoutine());
     }
+}
 
     private IEnumerator ResetWallRoutine()
     {
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1f);
 
-        while (Vector3.Distance(transform.position, originPosition) > 0.05f)
-        {
-            transform.position = Vector3.MoveTowards(
-                transform.position, originPosition, wallMoveSpeed * Time.deltaTime);
-            yield return null;
-        }
+        SetWallVisibleClientRpc(false);
 
         transform.position = originPosition;
+        wallUsed = false;
     }
 
 
-    //killbox
-    // anything that kills on contact... like fire, wall, killbox all route hereeeee
+    // killbox, fire, and wall collision logic
+    //  obstacle kill logic + wall activation lives here
 
     private void OnTriggerEnter2D(Collider2D other)
     {
@@ -191,27 +174,55 @@ public class Obstacle : NetworkBehaviour
         PlayerController player = other.GetComponent<PlayerController>();
         if (player == null) return;
 
-        bool shouldKill = obstacleType == ObstacleType.Killbox
-                       || obstacleType == ObstacleType.Fire
-                       || obstacleType == ObstacleType.TeleportingWall;
-
-        if (shouldKill)
+        switch (obstacleType)
         {
-            player.Die();
-            PlayDeathParticlesClientRpc(other.transform.position);
+            case ObstacleType.Killbox:
+                KillPlayer(player, other.transform.position);
+                break;
+
+            case ObstacleType.Fire:
+                KillPlayer(player, other.transform.position);
+                break;
+
+            case ObstacleType.TeleportingWall:
+               
+                if (!wallUsed && !isCharging)
+                {
+                    wallUsed   = true;
+                    wallTarget = player.transform;
+                    StartCoroutine(ChargeAfterDelay());
+                }
+               
+                else if (isCharging)
+                {
+                    KillPlayer(player, other.transform.position);
+                }
+                break;
         }
     }
 
+    private IEnumerator ChargeAfterDelay()
+    {
+        
+        SetWallVisibleClientRpc(true);
+        yield return new WaitForSeconds(wallChargeDelay);
+        isCharging = true;
+    }
 
-    
+    private void KillPlayer(PlayerController player, Vector3 position)
+    {
+        player.Die();
+        PlayDeathParticlesClientRpc(position);
+    }
+
+
+   
 
     private PlayerController GetNearestPlayer(float radius)
     {
-        Collider2D[] hits = Physics2D.OverlapCircleAll(
-            transform.position, radius);
-
+        Collider2D[]     hits    = Physics2D.OverlapCircleAll(transform.position, radius);
         PlayerController nearest = null;
-        float closest = Mathf.Infinity;
+        float            closest = Mathf.Infinity;
 
         foreach (Collider2D hit in hits)
         {
@@ -219,25 +230,43 @@ public class Obstacle : NetworkBehaviour
             if (p == null) continue;
 
             float dist = Vector3.Distance(transform.position, p.transform.position);
-            if (dist < closest)
-            {
-                closest = dist;
-                nearest = p;
-            }
+            if (dist < closest) { closest = dist; nearest = p; }
         }
 
         return nearest;
+    }
+
+    private void SetWallVisible(bool visible)
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        Collider2D     col = GetComponent<Collider2D>();
+
+        if (sr)  sr.enabled  = visible;
+        if (col) col.enabled = visible;
     }
 
 
    
 
     [ClientRpc]
+    private void SetWallVisibleClientRpc(bool visible)
+    {
+        SetWallVisible(visible);
+    }
+
+    [ClientRpc]
+    private void SyncWallPositionClientRpc(Vector3 position)
+    {
+      
+        if (!IsServer) transform.position = position;
+    }
+
+    [ClientRpc]
     private void SyncParticlesClientRpc(bool playing)
     {
         if (obstacleParticles == null) return;
-        if (playing && !obstacleParticles.isPlaying) obstacleParticles.Play();
-        if (!playing && obstacleParticles.isPlaying) obstacleParticles.Stop();
+        if (playing  && !obstacleParticles.isPlaying) obstacleParticles.Play();
+        if (!playing &&  obstacleParticles.isPlaying) obstacleParticles.Stop();
     }
 
     [ClientRpc]
