@@ -101,6 +101,22 @@ public class PlayerController : NetworkBehaviour
     }
 
 
+public void SetSpawnPoint(Vector3 point)
+{
+    if (!IsServer) return;
+    spawnPoint         = point;
+    transform.position = point;
+
+   
+    SetSpawnPointClientRpc(point);
+}
+
+[ClientRpc]
+private void SetSpawnPointClientRpc(Vector3 point)
+{
+    spawnPoint = point;
+}
+
     public void Die()
 {
     if (!IsOwner) return;
