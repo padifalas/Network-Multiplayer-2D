@@ -10,46 +10,53 @@ public class Obstacle : NetworkBehaviour
     [SerializeField] private ObstacleType obstacleType;
 
     [Header("Fire Settings")]
-    [SerializeField] private float fireExpandScale = 2.5f;
-    [SerializeField] private float fireExpandSpeed = 3f;
+    [SerializeField] private float fireExpandScale  = 2.5f;
+    [SerializeField] private float fireExpandSpeed= 3f;
     [SerializeField] private float fireDetectRadius = 3f;
 
     [Header("Sink Settings")]
     [SerializeField] private float sinkSpeed = 2f;
     [SerializeField] private float sinkDetectRadius = 2f;
-    [SerializeField] private float sinkResetDelay = 2f;
+    [SerializeField] private float sinkResetDelay   = 2f;
+    [SerializeField] private Transform killboxTransform; 
 
-    [Header("Pushing Wall Settings")]
+    [Header("Pushing Wall")]
     [SerializeField] private float wallMoveSpeed = 8f;
-    [SerializeField] private float wallChargeDelay= 0.3f;
+    [SerializeField] private float wallChargeDelay = 0.3f;
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem obstacleParticles;
 
-    private Vector3 originPosition;
-    private Vector3 originScale;
+    private Vector3   originPosition;
+    private Vector3   originScale;
 
     // fire
     private bool isExpanded;
 
     // sink
     private bool isSinking;
-    private Coroutine  sinkResetCoroutine;
+    private float sinkTargetY;
+    private Coroutine sinkResetCoroutine;
 
     // wall
     private bool isCharging;
     private bool wallUsed;
-    private Transform  wallTarget;
+    private Transform wallTarget;
 
 
     private void Start()
     {
         originPosition = transform.position;
-        originScale = transform.localScale;
+        originScale    = transform.localScale;
 
-        
         if (obstacleType == ObstacleType.TeleportingWall)
             SetWallVisible(false);
+
+        
+        if (obstacleType == ObstacleType.Sink && killboxTransform != null)
+            sinkTargetY = killboxTransform.position.y - 1.5f;
+        else
+            sinkTargetY = originPosition.y - 3f; 
     }
 
     private void Update()
@@ -58,14 +65,14 @@ public class Obstacle : NetworkBehaviour
 
         switch (obstacleType)
         {
-            case ObstacleType.Fire: HandleFire(); break;
+            case ObstacleType.Fire:  HandleFire(); break;
             case ObstacleType.Sink: HandleSink(); break;
             case ObstacleType.TeleportingWall: HandleWall(); break;
         }
     }
 
 
-    //fire behabiour
+    // fireee obs
 
     private void HandleFire()
     {
@@ -92,7 +99,9 @@ public class Obstacle : NetworkBehaviour
     }
 
 
-    //sinking platform behaviour - sinks down when player is near, then resets after a delay
+    // sinking platform obst
+    // si nk until the platform is below  killbox
+    // player falls off into the killbox trigger and dies
 
     private void HandleSink()
     {
@@ -100,7 +109,7 @@ public class Obstacle : NetworkBehaviour
 
         if (nearest != null && !isSinking)
         {
-            isSinking          = true;
+            isSinking = true;
             if (sinkResetCoroutine != null) StopCoroutine(sinkResetCoroutine);
             sinkResetCoroutine = StartCoroutine(SinkRoutine());
         }
@@ -108,64 +117,69 @@ public class Obstacle : NetworkBehaviour
 
     private IEnumerator SinkRoutine()
     {
-        while (transform.position.y > originPosition.y - 2f)
+        // go down until platform is below the killbox
+        while (transform.position.y > sinkTargetY)
         {
             transform.position += Vector3.down * sinkSpeed * Time.deltaTime;
+            SyncSinkPositionClientRpc(transform.position);
             yield return null;
         }
 
+        
+        transform.position = new Vector3(originPosition.x, sinkTargetY, originPosition.z);
+        SyncSinkPositionClientRpc(transform.position);
+
+        
         yield return new WaitForSeconds(sinkResetDelay);
 
+        
         while (Vector3.Distance(transform.position, originPosition) > 0.05f)
         {
             transform.position = Vector3.MoveTowards(
                 transform.position, originPosition, sinkSpeed * Time.deltaTime);
+            SyncSinkPositionClientRpc(transform.position);
             yield return null;
         }
 
         transform.position = originPosition;
-        isSinking          = false;
+        SyncSinkPositionClientRpc(transform.position);
+        isSinking = false;
     }
 
 
-    // pushing wall
-    
+    // pushing wall obstacle
 
-private void HandleWall()
-{
-    if (!isCharging || wallTarget == null) return;
-
-  
-    Vector3 target = new Vector3(wallTarget.position.x, originPosition.y, 0f);
-
-    transform.position = Vector3.MoveTowards(
-        transform.position,
-        target,
-        wallMoveSpeed * Time.deltaTime);
-
-    SyncWallPositionClientRpc(transform.position);
-
-    if (Vector3.Distance(transform.position, target) < 0.3f)
+    private void HandleWall()
     {
-        isCharging = false;
-        wallTarget = null;
-        StartCoroutine(ResetWallRoutine());
+        if (!isCharging || wallTarget == null) return;
+
+        Vector3 target = new Vector3(wallTarget.position.x, originPosition.y, 0f);
+
+        transform.position = Vector3.MoveTowards(
+            transform.position,
+            target,
+            wallMoveSpeed * Time.deltaTime);
+
+        SyncWallPositionClientRpc(transform.position);
+
+        if (Vector3.Distance(transform.position, target) < 0.3f)
+        {
+            isCharging = false;
+            wallTarget = null;
+            StartCoroutine(ResetWallRoutine());
+        }
     }
-}
 
     private IEnumerator ResetWallRoutine()
     {
         yield return new WaitForSeconds(1f);
-
         SetWallVisibleClientRpc(false);
-
         transform.position = originPosition;
-        wallUsed = false;
+        wallUsed           = false;
     }
 
 
-    // killbox, fire, and wall collision logic
-    //  obstacle kill logic + wall activation lives here
+   
 
     private void OnTriggerEnter2D(Collider2D other)
     {
@@ -185,14 +199,12 @@ private void HandleWall()
                 break;
 
             case ObstacleType.TeleportingWall:
-               
                 if (!wallUsed && !isCharging)
                 {
                     wallUsed   = true;
                     wallTarget = player.transform;
                     StartCoroutine(ChargeAfterDelay());
                 }
-               
                 else if (isCharging)
                 {
                     KillPlayer(player, other.transform.position);
@@ -203,7 +215,6 @@ private void HandleWall()
 
     private IEnumerator ChargeAfterDelay()
     {
-        
         SetWallVisibleClientRpc(true);
         yield return new WaitForSeconds(wallChargeDelay);
         isCharging = true;
@@ -216,13 +227,13 @@ private void HandleWall()
     }
 
 
-   
+
 
     private PlayerController GetNearestPlayer(float radius)
     {
-        Collider2D[]     hits    = Physics2D.OverlapCircleAll(transform.position, radius);
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius);
         PlayerController nearest = null;
-        float            closest = Mathf.Infinity;
+        float closest = Mathf.Infinity;
 
         foreach (Collider2D hit in hits)
         {
@@ -238,15 +249,20 @@ private void HandleWall()
 
     private void SetWallVisible(bool visible)
     {
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        Collider2D     col = GetComponent<Collider2D>();
-
+        SpriteRenderer sr  = GetComponent<SpriteRenderer>();
+        Collider2D col = GetComponent<Collider2D>();
         if (sr)  sr.enabled  = visible;
         if (col) col.enabled = visible;
     }
 
 
-   
+ 
+
+    [ClientRpc]
+    private void SyncSinkPositionClientRpc(Vector3 position)
+    {
+        if (!IsServer) transform.position = position;
+    }
 
     [ClientRpc]
     private void SetWallVisibleClientRpc(bool visible)
@@ -257,7 +273,6 @@ private void HandleWall()
     [ClientRpc]
     private void SyncWallPositionClientRpc(Vector3 position)
     {
-      
         if (!IsServer) transform.position = position;
     }
 
