@@ -19,6 +19,8 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private Sprite player2Sprite;
     [SerializeField] private Color player1Color = Color.red;
     [SerializeField] private Color player2Color = Color.orange;
+    [SerializeField] private Transform player1SpawnPoint;
+    [SerializeField] private Transform player2SpawnPoint;
 
     [Header("Sabotage")]
     [SerializeField] private float freezeDuration  = 1f;
@@ -45,16 +47,50 @@ public class PlayerController : NetworkBehaviour
     private bool hasGun;
     private bool isFrozen;
 
+    private void Awake()
+    {
+        if (player1SpawnPoint == null)
+            player1SpawnPoint = FindSceneSpawnPoint("Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint","P1Spawn");
+
+        if (player2SpawnPoint == null)
+            player2SpawnPoint = FindSceneSpawnPoint("Player2SpawnPoint", "Player2Spawn", "P2SpawnPoint", "P2Spawn");
+    }
+
+    private Transform FindSceneSpawnPoint(params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (string.IsNullOrEmpty(name))
+                continue;
+
+            var spawnObject = GameObject.Find(name);
+            if (spawnObject != null)
+                return spawnObject.transform;
+        }
+
+        return null;
+    }
 
 
     public override void OnNetworkSpawn()
     {
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
-        spawnPoint = transform.position;
-
 
         bool isPlayerOne = OwnerClientId == 0;
+        Transform selectedSpawn = isPlayerOne ? player1SpawnPoint : player2SpawnPoint;
+
+        if (selectedSpawn != null)
+        {
+            spawnPoint = selectedSpawn.position;
+            transform.position = spawnPoint;
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: Spawn point for {(isPlayerOne ? "Player 1" : "Player 2")} is not assigned. Using current position.", this);
+            spawnPoint = transform.position;
+        }
+
         sr.sprite = isPlayerOne ? player1Sprite : player2Sprite;
         sr.color  = isPlayerOne ? player1Color  : player2Color;
 
