@@ -343,8 +343,10 @@ MonoBehaviour:
   player2Sprite: {fileID: -4652300868185288318, guid: ce927ea7eb82ac74ba39a5d12d18ca0d, type: 3}
   player1Color: {r: 1, g: 1, b: 1, a: 1}
   player2Color: {r: 0.93207544, g: 0.3845198, b: 0.3429333, a: 1}
-  freezeDuration: 1
-  frozenSpeedMult: 0.2
+  player1SpawnPoint: {fileID: 0}
+  player2SpawnPoint: {fileID: 0}
+  freezeDuration: 10
+  frozenSpeedMult: 1
   frozenColor: {r: 0.7, g: 0.9, b: 1, a: 1}
   freezeParticles: {fileID: 8834775398360733674}
   gunVisual: {fileID: 7530506029686682315}
@@ -551,7 +553,7 @@ Transform:
   m_GameObject: {fileID: 5232805505971837741}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.383, z: 0}
+  m_LocalPosition: {x: 0, y: -2.11, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

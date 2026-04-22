@@ -25,32 +25,29 @@ public class PlayerController : NetworkBehaviour
     [Header("Sabotage")]
     [SerializeField] private float freezeDuration  = 1f;
     [SerializeField] private float frozenSpeedMult = 0.2f;
-    [SerializeField] private Color frozenColor = new Color(0.7f, 0.9f, 1f); 
+    [SerializeField] private Color frozenColor = new Color(0.7f, 0.9f, 1f);
     [SerializeField] private ParticleSystem freezeParticles;
-    [SerializeField] private GameObject gunVisual;   
+    [SerializeField] private GameObject gunVisual;
     [SerializeField] private NetworkObject projectilePrefab;
-    [SerializeField] private Transform gunHand; // drag GunPivot in here
-
+    [SerializeField] private Transform gunHand;
 
     public NetworkVariable<bool> ControlsFlipped = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> IsFrozen = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-
     private PlayerInputActions input;
     private Rigidbody2D rb;
     private SpriteRenderer sr;
-    private Vector2  moveInput;
+    private Vector2 moveInput;
     private bool isGrounded;
     private bool jumpQueued;
     private Vector3 spawnPoint;
 
     private bool hasGun;
-    private bool isFrozen;
 
     private void Awake()
     {
         if (player1SpawnPoint == null)
-            player1SpawnPoint = FindSceneSpawnPoint("Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint","P1Spawn");
+            player1SpawnPoint = FindSceneSpawnPoint("Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint", "P1Spawn");
 
         if (player2SpawnPoint == null)
             player2SpawnPoint = FindSceneSpawnPoint("Player2SpawnPoint", "Player2Spawn", "P2SpawnPoint", "P2Spawn");
@@ -60,23 +57,19 @@ public class PlayerController : NetworkBehaviour
     {
         foreach (var name in names)
         {
-            if (string.IsNullOrEmpty(name))
-                continue;
-
+            if (string.IsNullOrEmpty(name)) continue;
             var spawnObject = GameObject.Find(name);
-            if (spawnObject != null)
-                return spawnObject.transform;
+            if (spawnObject != null) return spawnObject.transform;
         }
-
         return null;
     }
-
 
     public override void OnNetworkSpawn()
     {
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
 
+        // FIX 1: Declared once — was re-declared inside the if(!IsOwner) block causing CS0128
         bool isPlayerOne = OwnerClientId == 0;
         Transform selectedSpawn = isPlayerOne ? player1SpawnPoint : player2SpawnPoint;
 
@@ -100,6 +93,35 @@ public class PlayerController : NetworkBehaviour
 
         input = new PlayerInputActions();
         input.Player.Enable();
+
+        // Device assignment — only restrict devices when there are actually enough
+        // distinct ones to go around. If both players share one keyboard (e.g. local
+        // Multiplayer Play Mode testing), leave devices unrestricted so neither player
+        // ends up with nothing assigned.
+        // In a real networked game across two machines this block is irrelevant —
+        // IsOwner already means only one PlayerController runs input on each machine.
+        var gamepads  = Gamepad.all;
+        var keyboards = InputSystem.devices;
+
+        if (isPlayerOne)
+        {
+            // P1: prefer first gamepad, else first keyboard
+            if (gamepads.Count > 0)
+                input.devices = new InputDevice[] { gamepads[0] };
+            // If only one keyboard exists don't restrict — both players share it
+        }
+        else
+        {
+            // P2: prefer second gamepad, else second keyboard if it exists
+            if (gamepads.Count > 1)
+                input.devices = new InputDevice[] { gamepads[1] };
+            else if (gamepads.Count == 1)
+                input.devices = new InputDevice[] { gamepads[0] };
+            else if (keyboards.Count > 1)
+                input.devices = new InputDevice[] { keyboards[1] };
+            // If only one keyboard: leave unrestricted (shared with P1 locally)
+        }
+
         input.Player.Jump.performed  += _ => jumpQueued = true;
         input.Player.Shoot.performed += _ => TryShoot();
     }
@@ -110,52 +132,40 @@ public class PlayerController : NetworkBehaviour
         if (IsOwner) input?.Dispose();
     }
 
-
-
     private void Update()
     {
         if (!IsOwner) return;
         moveInput  = input.Player.Move.ReadValue<Vector2>();
-        isGrounded= Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
     }
 
     private void FixedUpdate()
     {
         if (!IsOwner) return;
 
-
         float speedMultiplier = IsFrozen.Value ? frozenSpeedMult : 1f;
-        float direction = ControlsFlipped.Value ? -1f : 1f;
-        float horizontal = moveInput.x * direction * moveSpeed * speedMultiplier;
+        float direction       = ControlsFlipped.Value ? -1f : 1f;
+        float horizontal      = moveInput.x * direction * moveSpeed * speedMultiplier;
 
         rb.linearVelocity = new Vector2(horizontal, rb.linearVelocity.y);
-
 
         if (moveInput.x != 0)
             sr.flipX = horizontal < 0;
 
-            
-    if (gunHand != null)
-    {
-        Vector3 s = gunHand.localScale;
-        gunHand.localScale = new Vector3(
-            horizontal < 0 ? -Mathf.Abs(s.x) : Mathf.Abs(s.x), s.y, s.z);
 
-        // jump
+        if (gunHand != null)
+        {
+            Vector3 s = gunHand.localScale;
+            gunHand.localScale = new Vector3(
+                horizontal < 0 ? -Mathf.Abs(s.x) : Mathf.Abs(s.x), s.y, s.z);
+        }
+
+    
         if (jumpQueued && isGrounded)
-        {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-            jumpQueued = false;
-        }
-        else
-        {
-            jumpQueued = false;
-        }
+
+        jumpQueued = false;
     }
-    }
-
-
-
 
     public void FlipControls(bool flipped)
     {
@@ -190,7 +200,10 @@ public class PlayerController : NetworkBehaviour
         if (!hasGun) return;
         hasGun = false;
 
-        NetworkObject projectile = Instantiate(projectilePrefab, transform.position + (Vector3)(direction * 0.8f),Quaternion.identity);
+        NetworkObject projectile = Instantiate(
+            projectilePrefab,
+            transform.position + (Vector3)(direction * 0.8f),
+            Quaternion.identity);
 
         projectile.Spawn();
         projectile.GetComponent<ProjectileFreeze>().SetDirection(direction);
@@ -227,14 +240,11 @@ public class PlayerController : NetworkBehaviour
         if (!current &&  freezeParticles.isPlaying) freezeParticles.Stop();
     }
 
-
     public void SetSpawnPoint(Vector3 point)
     {
         if (!IsServer) return;
-        spawnPoint         = point;
+        spawnPoint = point;
         transform.position = point;
-
-
         SetSpawnPointClientRpc(point);
     }
 
