@@ -201,6 +201,7 @@ public class PlayerController : NetworkBehaviour
         projectile.GetComponent<ProjectileFreeze>().SetDirection(direction);
 
         DisarmClientRpc();
+        AudioManager.Singleton?.PlayShoot();
     }
 
     [ClientRpc]
@@ -221,6 +222,7 @@ public class PlayerController : NetworkBehaviour
         IsFrozen.Value = true;
         yield return new WaitForSeconds(freezeDuration);
         IsFrozen.Value = false;
+        AudioManager.Singleton?.PlayFreeze();
     }
 
     private void OnFrozenChanged(bool previous, bool current)
@@ -236,6 +238,7 @@ public void ApplyKnockback(Vector2 direction, float force)
 {
     if (!IsServer) return;
     ApplyKnockbackClientRpc(direction, force);
+    AudioManager.Singleton?.PlayKnockback();
 }
 
 [ClientRpc]
@@ -244,6 +247,7 @@ private void ApplyKnockbackClientRpc(Vector2 direction, float force)
     if (!IsOwner) return;
     rb.linearVelocity = new Vector2(direction.x * force, force * 0.5f);
     StartCoroutine(CameraShakeRoutine());
+    AudioManager.Singleton?.PlayKnockback();
 }
 
 private IEnumerator CameraShakeRoutine()
@@ -290,5 +294,6 @@ private IEnumerator CameraShakeRoutine()
     {
         transform.position = spawnPoint;
         rb.linearVelocity  = Vector2.zero;
+        AudioManager.Singleton?.PlayDeath();   
     }
 }

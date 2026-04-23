@@ -215,6 +215,7 @@ public class Obstacle : NetworkBehaviour
 
             case ObstacleType.Bookshelf:
                 if (!IsServer) return;
+                AudioManager.Singleton?.PlayBook();
 
                
                 float playerX = player.transform.position.x;
@@ -244,8 +245,8 @@ public class Obstacle : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestDeathParticlesServerRpc(Vector3 position)
+[Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+private void RequestDeathParticlesServerRpc(Vector3 position)
     {
         PlayDeathParticlesClientRpc(position);
     }
@@ -261,6 +262,7 @@ public class Obstacle : NetworkBehaviour
     {
         player.Die();
         PlayDeathParticlesClientRpc(position);
+        AudioManager.Singleton?.PlayDeath();
     }
 
 

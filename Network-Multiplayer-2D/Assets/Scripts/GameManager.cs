@@ -1,17 +1,33 @@
 using Unity.Netcode;
 using UnityEngine;
+using System.Collections;
 
 public class GameManager : NetworkBehaviour
 {
+    public static GameManager Singleton { get; private set; }
+
     [Header("Spawn Points")]
     [SerializeField] private Transform spawnPointP1;
     [SerializeField] private Transform spawnPointP2;
+
+    [Header("Scoring")]
+    public NetworkVariable<int> Player1Score = new( 0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> Player2Score = new( 0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<bool> RoundActive = new( true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+
+    private void Awake()
+    {
+        if (Singleton != null) { Destroy(gameObject); return; }
+        Singleton = this;
+    }
 
     public override void OnNetworkSpawn()
     {
         if (!IsServer) return;
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-
         MovePlayerToSpawn(0);
     }
 
@@ -31,7 +47,7 @@ public class GameManager : NetworkBehaviour
         StartCoroutine(MoveAfterSpawn(clientId));
     }
 
-    private System.Collections.IEnumerator MoveAfterSpawn(ulong clientId)
+    private IEnumerator MoveAfterSpawn(ulong clientId)
     {
         yield return new WaitForSeconds(0.1f);
 
@@ -50,5 +66,17 @@ public class GameManager : NetworkBehaviour
             : spawnPointP2.position;
 
         controller.SetSpawnPoint(spawnPos);
+    }
+
+    
+    public void PlayerReachedDoor(ulong clientId)
+    {
+        if (!IsServer)  return;
+        if (!RoundActive.Value) return;
+
+        RoundActive.Value = false;
+
+        if (clientId == 0) Player1Score.Value++;
+        else Player2Score.Value++;
     }
 }
