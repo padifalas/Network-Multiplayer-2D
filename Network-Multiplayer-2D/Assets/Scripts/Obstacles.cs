@@ -4,31 +4,35 @@ using System.Collections;
 
 public class Obstacle : NetworkBehaviour
 {
-    public enum ObstacleType { Fire, Sink, TeleportingWall, Killbox }
+    public enum ObstacleType { Fire, Sink, TeleportingWall, Killbox, Bookshelf }
 
     [Header("Type")]
     [SerializeField] private ObstacleType obstacleType;
 
     [Header("Fire Settings")]
     [SerializeField] private float fireExpandScale  = 2.5f;
-    [SerializeField] private float fireExpandSpeed= 3f;
+    [SerializeField] private float fireExpandSpeed  = 3f;
     [SerializeField] private float fireDetectRadius = 3f;
 
     [Header("Sink Settings")]
-    [SerializeField] private float sinkSpeed = 2f;
+    [SerializeField] private float  sinkSpeed        = 2f;
     [SerializeField] private float sinkDetectRadius = 2f;
     [SerializeField] private float sinkResetDelay   = 2f;
-    [SerializeField] private Transform killboxTransform; 
+    [SerializeField] private Transform killboxTransform;
 
     [Header("Pushing Wall")]
-    [SerializeField] private float wallMoveSpeed = 8f;
+    [SerializeField] private float wallMoveSpeed   = 8f;
     [SerializeField] private float wallChargeDelay = 0.3f;
+
+    [Header("Bookshelf Settings")]
+    [SerializeField] private Transform bookSpawnPoint;
+    [SerializeField] private NetworkObject bookProjectilePrefab;
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem obstacleParticles;
 
-    private Vector3   originPosition;
-    private Vector3   originScale;
+    private Vector3  originPosition;
+    private Vector3 originScale;
 
     // fire
     private bool isExpanded;
@@ -40,23 +44,22 @@ public class Obstacle : NetworkBehaviour
 
     // wall
     private bool isCharging;
-    private bool wallUsed;
+    private bool  wallUsed;
     private Transform wallTarget;
 
 
     private void Start()
     {
         originPosition = transform.position;
-        originScale    = transform.localScale;
+        originScale = transform.localScale;
 
         if (obstacleType == ObstacleType.TeleportingWall)
             SetWallVisible(false);
 
-        
         if (obstacleType == ObstacleType.Sink && killboxTransform != null)
             sinkTargetY = killboxTransform.position.y - 1.5f;
         else
-            sinkTargetY = originPosition.y - 3f; 
+            sinkTargetY = originPosition.y - 3f;
     }
 
     private void Update()
@@ -65,14 +68,15 @@ public class Obstacle : NetworkBehaviour
 
         switch (obstacleType)
         {
-            case ObstacleType.Fire:  HandleFire(); break;
+            case ObstacleType.Fire: HandleFire(); break;
             case ObstacleType.Sink: HandleSink(); break;
             case ObstacleType.TeleportingWall: HandleWall(); break;
+            
         }
     }
 
 
-    // fireee obs
+    // fire obs
 
     private void HandleFire()
     {
@@ -99,9 +103,6 @@ public class Obstacle : NetworkBehaviour
     }
 
 
-    // sinking platform obst
-    // si nk until the platform is below  killbox
-    // player falls off into the killbox trigger and dies
 
     private void HandleSink()
     {
@@ -109,7 +110,7 @@ public class Obstacle : NetworkBehaviour
 
         if (nearest != null && !isSinking)
         {
-            isSinking = true;
+            isSinking          = true;
             if (sinkResetCoroutine != null) StopCoroutine(sinkResetCoroutine);
             sinkResetCoroutine = StartCoroutine(SinkRoutine());
         }
@@ -125,14 +126,11 @@ public class Obstacle : NetworkBehaviour
             yield return null;
         }
 
-        
         transform.position = new Vector3(originPosition.x, sinkTargetY, originPosition.z);
         SyncSinkPositionClientRpc(transform.position);
 
-        
         yield return new WaitForSeconds(sinkResetDelay);
 
-        
         while (Vector3.Distance(transform.position, originPosition) > 0.05f)
         {
             transform.position = Vector3.MoveTowards(
@@ -179,26 +177,59 @@ public class Obstacle : NetworkBehaviour
     }
 
 
-   
+    // bookshelf obstacle
+    // fires a book toward the player only when they enter the trigger
+    // direction is determined by which side of the bookshelf the player enters from
+
+    private void FireBook(Vector2 direction)
+    {
+        if (bookProjectilePrefab == null) return;
+
+        Vector3 spawnPos = bookSpawnPoint != null
+            ? bookSpawnPoint.position
+            : transform.position;
+
+        NetworkObject book = Instantiate(
+            bookProjectilePrefab, spawnPos, Quaternion.identity);
+
+        book.Spawn();
+        book.GetComponent<BookProjectile>().SetDirection(direction);
+    }
+
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!IsServer) return;
-
         PlayerController player = other.GetComponent<PlayerController>();
         if (player == null) return;
 
         switch (obstacleType)
         {
             case ObstacleType.Killbox:
-                KillPlayer(player, other.transform.position);
+            case ObstacleType.Fire:
+                if (player.IsOwner)
+                {
+                    player.Die();
+                    RequestDeathParticlesServerRpc(other.transform.position);
+                }
                 break;
 
-            case ObstacleType.Fire:
-                KillPlayer(player, other.transform.position);
+            case ObstacleType.Bookshelf:
+                if (!IsServer) return;
+
+               
+                float playerX = player.transform.position.x;
+                float spawnX  = bookSpawnPoint != null
+                    ? bookSpawnPoint.position.x
+                    : transform.position.x;
+                Vector2 fireDirection = playerX > spawnX ? Vector2.right : Vector2.left;
+
+                FireBook(fireDirection);
+                ShakeBookshelfClientRpc();
                 break;
 
             case ObstacleType.TeleportingWall:
+                if (!IsServer) return;
+
                 if (!wallUsed && !isCharging)
                 {
                     wallUsed   = true;
@@ -213,6 +244,12 @@ public class Obstacle : NetworkBehaviour
         }
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestDeathParticlesServerRpc(Vector3 position)
+    {
+        PlayDeathParticlesClientRpc(position);
+    }
+
     private IEnumerator ChargeAfterDelay()
     {
         SetWallVisibleClientRpc(true);
@@ -225,8 +262,6 @@ public class Obstacle : NetworkBehaviour
         player.Die();
         PlayDeathParticlesClientRpc(position);
     }
-
-
 
 
     private PlayerController GetNearestPlayer(float radius)
@@ -256,7 +291,31 @@ public class Obstacle : NetworkBehaviour
     }
 
 
- 
+    [ClientRpc]
+    private void ShakeBookshelfClientRpc()
+    {
+        StartCoroutine(BookshelfWobble());
+    }
+
+    private IEnumerator BookshelfWobble()
+    {
+        float elapsed   = 0f;
+        float duration  = 0.2f;
+        float magnitude = 0.05f;
+
+        while (elapsed < duration)
+        {
+            float offset       = Mathf.Sin(elapsed * 40f) * magnitude;
+            transform.position = new Vector3(
+                originPosition.x + offset,
+                originPosition.y,
+                originPosition.z);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = originPosition;
+    }
 
     [ClientRpc]
     private void SyncSinkPositionClientRpc(Vector3 position)

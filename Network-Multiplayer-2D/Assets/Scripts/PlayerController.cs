@@ -69,7 +69,7 @@ public class PlayerController : NetworkBehaviour
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
 
-        // FIX 1: Declared once — was re-declared inside the if(!IsOwner) block causing CS0128
+    
         bool isPlayerOne = OwnerClientId == 0;
         Transform selectedSpawn = isPlayerOne ? player1SpawnPoint : player2SpawnPoint;
 
@@ -94,12 +94,7 @@ public class PlayerController : NetworkBehaviour
         input = new PlayerInputActions();
         input.Player.Enable();
 
-        // Device assignment — only restrict devices when there are actually enough
-        // distinct ones to go around. If both players share one keyboard (e.g. local
-        // Multiplayer Play Mode testing), leave devices unrestricted so neither player
-        // ends up with nothing assigned.
-        // In a real networked game across two machines this block is irrelevant —
-        // IsOwner already means only one PlayerController runs input on each machine.
+
         var gamepads  = Gamepad.all;
         var keyboards = InputSystem.devices;
 
@@ -119,7 +114,7 @@ public class PlayerController : NetworkBehaviour
                 input.devices = new InputDevice[] { gamepads[0] };
             else if (keyboards.Count > 1)
                 input.devices = new InputDevice[] { keyboards[1] };
-            // If only one keyboard: leave unrestricted (shared with P1 locally)
+            
         }
 
         input.Player.Jump.performed  += _ => jumpQueued = true;
@@ -144,8 +139,8 @@ public class PlayerController : NetworkBehaviour
         if (!IsOwner) return;
 
         float speedMultiplier = IsFrozen.Value ? frozenSpeedMult : 1f;
-        float direction       = ControlsFlipped.Value ? -1f : 1f;
-        float horizontal      = moveInput.x * direction * moveSpeed * speedMultiplier;
+        float direction = ControlsFlipped.Value ? -1f : 1f;
+        float horizontal = moveInput.x * direction * moveSpeed * speedMultiplier;
 
         rb.linearVelocity = new Vector2(horizontal, rb.linearVelocity.y);
 
@@ -200,10 +195,7 @@ public class PlayerController : NetworkBehaviour
         if (!hasGun) return;
         hasGun = false;
 
-        NetworkObject projectile = Instantiate(
-            projectilePrefab,
-            transform.position + (Vector3)(direction * 0.8f),
-            Quaternion.identity);
+        NetworkObject projectile = Instantiate(projectilePrefab, transform.position + (Vector3)(direction * 0.8f), Quaternion.identity);
 
         projectile.Spawn();
         projectile.GetComponent<ProjectileFreeze>().SetDirection(direction);
@@ -240,6 +232,39 @@ public class PlayerController : NetworkBehaviour
         if (!current &&  freezeParticles.isPlaying) freezeParticles.Stop();
     }
 
+public void ApplyKnockback(Vector2 direction, float force)
+{
+    if (!IsServer) return;
+    ApplyKnockbackClientRpc(direction, force);
+}
+
+[ClientRpc]
+private void ApplyKnockbackClientRpc(Vector2 direction, float force)
+{
+    if (!IsOwner) return;
+    rb.linearVelocity = new Vector2(direction.x * force, force * 0.5f);
+    StartCoroutine(CameraShakeRoutine());
+}
+
+private IEnumerator CameraShakeRoutine()
+{
+    Camera cam = Camera.main;
+    Vector3 originPos  = cam.transform.localPosition;
+    float elapsed  = 0f;
+    float duration = 0.3f;
+    float magnitude = 0.15f;
+
+    while (elapsed < duration)
+    {
+        float x = Random.Range(-1f, 1f) * magnitude;
+        float y = Random.Range(-1f, 1f) * magnitude;
+        cam.transform.localPosition = new Vector3(originPos.x + x, originPos.y + y, originPos.z);
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+
+    cam.transform.localPosition = originPos;
+}
     public void SetSpawnPoint(Vector3 point)
     {
         if (!IsServer) return;
