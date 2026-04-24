@@ -31,7 +31,7 @@ public class Menu : MonoBehaviour
 
         networkManager.StartHost();
 
-        networkManager.SceneManager.LoadScene("TestScene", LoadSceneMode.Single);
+        networkManager.SceneManager.LoadScene("Level", LoadSceneMode.Single);
     }
 
     public void JoinGame()
