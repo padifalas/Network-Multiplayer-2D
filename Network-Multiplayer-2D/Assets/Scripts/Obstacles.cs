@@ -1,27 +1,31 @@
 using Unity.Netcode;
 using UnityEngine;
 using System.Collections;
+using UnityEditor.Callbacks;
 
 public class Obstacle : NetworkBehaviour
 {
-    public enum ObstacleType { Fire, Sink, TeleportingWall, Killbox, Bookshelf }
+    public enum ObstacleType { Fire, Sink, Chandelier, TeleportingWall, Killbox, Bookshelf }
 
     [Header("Type")]
     [SerializeField] private ObstacleType obstacleType;
 
     [Header("Fire Settings")]
-    [SerializeField] private float fireExpandScale  = 2.5f;
-    [SerializeField] private float fireExpandSpeed  = 3f;
+    [SerializeField] private float fireExpandScale = 2.5f;
+    [SerializeField] private float fireExpandSpeed = 3f;
     [SerializeField] private float fireDetectRadius = 3f;
 
     [Header("Sink Settings")]
-    [SerializeField] private float  sinkSpeed        = 2f;
+    [SerializeField] private float sinkSpeed = 2f;
     [SerializeField] private float sinkDetectRadius = 2f;
-    [SerializeField] private float sinkResetDelay   = 2f;
+    [SerializeField] private float sinkResetDelay = 2f;
     [SerializeField] private Transform killboxTransform;
 
+    [Header("Chandelier Settings")]
+    private Rigidbody2D rb;
+
     [Header("Pushing Wall")]
-    [SerializeField] private float wallMoveSpeed   = 8f;
+    [SerializeField] private float wallMoveSpeed = 8f;
     [SerializeField] private float wallChargeDelay = 0.3f;
 
     [Header("Bookshelf Settings")]
@@ -31,7 +35,7 @@ public class Obstacle : NetworkBehaviour
     [Header("Particles")]
     [SerializeField] private ParticleSystem obstacleParticles;
 
-    private Vector3  originPosition;
+    private Vector3 originPosition;
     private Vector3 originScale;
 
     // fire
@@ -44,14 +48,22 @@ public class Obstacle : NetworkBehaviour
 
     // wall
     private bool isCharging;
-    private bool  wallUsed;
+    private bool wallUsed;
     private Transform wallTarget;
-
 
     private void Start()
     {
         originPosition = transform.position;
         originScale = transform.localScale;
+
+        if (obstacleType == ObstacleType.Chandelier)
+        {
+            rb = GetComponent<Rigidbody2D>();
+
+            if (rb != null)
+                rb.simulated = false;
+
+        }
 
         if (obstacleType == ObstacleType.TeleportingWall)
             SetWallVisible(false);
@@ -70,11 +82,11 @@ public class Obstacle : NetworkBehaviour
         {
             case ObstacleType.Fire: HandleFire(); break;
             case ObstacleType.Sink: HandleSink(); break;
+            case ObstacleType.Chandelier: HandleFallingChandelier(); break;
             case ObstacleType.TeleportingWall: HandleWall(); break;
-            
+
         }
     }
-
 
     // fire obs
 
@@ -110,10 +122,16 @@ public class Obstacle : NetworkBehaviour
 
         if (nearest != null && !isSinking)
         {
-            isSinking          = true;
+            isSinking = true;
             if (sinkResetCoroutine != null) StopCoroutine(sinkResetCoroutine);
             sinkResetCoroutine = StartCoroutine(SinkRoutine());
         }
+    }
+
+    private void HandleFallingChandelier()
+    {
+        if (rb != null && !rb.simulated)
+            rb.simulated = true;
     }
 
     private IEnumerator SinkRoutine()
@@ -173,7 +191,7 @@ public class Obstacle : NetworkBehaviour
         yield return new WaitForSeconds(1f);
         SetWallVisibleClientRpc(false);
         transform.position = originPosition;
-        wallUsed           = false;
+        wallUsed = false;
     }
 
 
@@ -213,13 +231,19 @@ public class Obstacle : NetworkBehaviour
                 }
                 break;
 
+            case ObstacleType.Chandelier:
+                PlayerController nearest = GetNearestPlayer(2f);
+                if (nearest != null)
+                    HandleFallingChandelier();
+                break;
+
             case ObstacleType.Bookshelf:
                 if (!IsServer) return;
                 AudioManager.Singleton?.PlayBook();
 
-               
+
                 float playerX = player.transform.position.x;
-                float spawnX  = bookSpawnPoint != null
+                float spawnX = bookSpawnPoint != null
                     ? bookSpawnPoint.position.x
                     : transform.position.x;
                 Vector2 fireDirection = playerX > spawnX ? Vector2.right : Vector2.left;
@@ -233,7 +257,7 @@ public class Obstacle : NetworkBehaviour
 
                 if (!wallUsed && !isCharging)
                 {
-                    wallUsed   = true;
+                    wallUsed = true;
                     wallTarget = player.transform;
                     StartCoroutine(ChargeAfterDelay());
                 }
@@ -245,8 +269,8 @@ public class Obstacle : NetworkBehaviour
         }
     }
 
-[Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-private void RequestDeathParticlesServerRpc(Vector3 position)
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void RequestDeathParticlesServerRpc(Vector3 position)
     {
         PlayDeathParticlesClientRpc(position);
     }
@@ -286,9 +310,9 @@ private void RequestDeathParticlesServerRpc(Vector3 position)
 
     private void SetWallVisible(bool visible)
     {
-        SpriteRenderer sr  = GetComponent<SpriteRenderer>();
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
         Collider2D col = GetComponent<Collider2D>();
-        if (sr)  sr.enabled  = visible;
+        if (sr) sr.enabled = visible;
         if (col) col.enabled = visible;
     }
 
@@ -301,13 +325,13 @@ private void RequestDeathParticlesServerRpc(Vector3 position)
 
     private IEnumerator BookshelfWobble()
     {
-        float elapsed   = 0f;
-        float duration  = 0.2f;
+        float elapsed = 0f;
+        float duration = 0.2f;
         float magnitude = 0.05f;
 
         while (elapsed < duration)
         {
-            float offset       = Mathf.Sin(elapsed * 40f) * magnitude;
+            float offset = Mathf.Sin(elapsed * 40f) * magnitude;
             transform.position = new Vector3(
                 originPosition.x + offset,
                 originPosition.y,
@@ -341,8 +365,8 @@ private void RequestDeathParticlesServerRpc(Vector3 position)
     private void SyncParticlesClientRpc(bool playing)
     {
         if (obstacleParticles == null) return;
-        if (playing  && !obstacleParticles.isPlaying) obstacleParticles.Play();
-        if (!playing &&  obstacleParticles.isPlaying) obstacleParticles.Stop();
+        if (playing && !obstacleParticles.isPlaying) obstacleParticles.Play();
+        if (!playing && obstacleParticles.isPlaying) obstacleParticles.Stop();
     }
 
     [ClientRpc]

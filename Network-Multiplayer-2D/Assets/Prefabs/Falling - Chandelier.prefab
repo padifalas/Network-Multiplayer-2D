@@ -241,11 +241,11 @@ GameObject:
   - component: {fileID: 2893690789151685613}
   - component: {fileID: 1072520743140194888}
   - component: {fileID: -7526298476870303385}
-  - component: {fileID: 6797581342904739609}
   - component: {fileID: -6105923054036149321}
+  - component: {fileID: -8206463997917731332}
   m_Layer: 0
   m_Name: Falling - Chandelier
-  m_TagString: Untagged
+  m_TagString: Obstacle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -430,19 +430,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &6797581342904739609
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6223170165982046687}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c7465490ea02d4468ad8149f0f32288, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FallingChandelier
-  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!61 &-6105923054036149321
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -489,3 +476,29 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 10.19841, y: 18.223194}
   m_EdgeRadius: 0
+--- !u!114 &-8206463997917731332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6223170165982046687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b965b4aeccea6642a53e641bddf3e12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Obstacle
+  ShowTopMostFoldoutHeaderGroup: 1
+  obstacleType: 2
+  fireExpandScale: 2.5
+  fireExpandSpeed: 3
+  fireDetectRadius: 3
+  sinkSpeed: 2
+  sinkDetectRadius: 2
+  sinkResetDelay: 2
+  killboxTransform: {fileID: 0}
+  wallMoveSpeed: 8
+  wallChargeDelay: 0.3
+  bookSpawnPoint: {fileID: 0}
+  bookProjectilePrefab: {fileID: 0}
+  obstacleParticles: {fileID: 0}
