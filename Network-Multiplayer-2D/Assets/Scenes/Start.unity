@@ -2776,16 +2776,16 @@ MonoBehaviour:
   sfxSource: {fileID: 1392703250}
   deathClip: {fileID: 8300000, guid: 1b2082f9a51cd014c8911eeceb433c99, type: 3}
   respawnClip: {fileID: 8300000, guid: 2b5d64f9a1eeef94295824c5bd4d90a1, type: 3}
-  knockbackClip: {fileID: 0}
+  knockbackClip: {fileID: 8300000, guid: 1b4cdffba3664c245b741e5324ad2529, type: 3}
   freezeClip: {fileID: 8300000, guid: 05f474c4e3f637443b2efe2e840f94a1, type: 3}
-  shootClip: {fileID: 0}
-  fireClip: {fileID: 0}
-  sinkClip: {fileID: 0}
-  wallClip: {fileID: 0}
-  bookClip: {fileID: 0}
-  fallingChandelierClip: {fileID: 0}
-  goalClip: {fileID: 0}
-  roundWinClip: {fileID: 0}
+  shootClip: {fileID: 8300000, guid: 562f5463f157a7b429f393d2f862badf, type: 3}
+  fireClip: {fileID: 8300000, guid: 8b798d5b2f3de324d9ba1c83c44b7be7, type: 3}
+  sinkClip: {fileID: 8300000, guid: b7d35573cfcc3a24fa9fd3ca58af8b02, type: 3}
+  wallClip: {fileID: 8300000, guid: 9f271e192188cfb4bb2c257311dff978, type: 3}
+  bookClip: {fileID: 8300000, guid: d85894522c38ed54a9fe850d53fc8bac, type: 3}
+  fallingChandelierClip: {fileID: 8300000, guid: f1413de65d708b541b87a88a496e19b1, type: 3}
+  goalClip: {fileID: 8300000, guid: b042d5d941cb7184b84071a1cb2d5396, type: 3}
+  roundWinClip: {fileID: 8300000, guid: 599a9b24e4350c84784e221a1a40d6c3, type: 3}
   musicVolume: 0.4
   sfxVolume: 1
 --- !u!4 &1254355521
