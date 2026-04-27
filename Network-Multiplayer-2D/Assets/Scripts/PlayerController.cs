@@ -6,10 +6,10 @@ using System.Collections;
 public class PlayerController : NetworkBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed       = 6f;
-    [SerializeField] private float jumpForce       = 14f;
-    [SerializeField] private float acceleration    = 12f;
-    [SerializeField] private float deceleration    = 18f;
+    [SerializeField] private float moveSpeed = 6f;
+    [SerializeField] private float jumpForce = 14f;
+    [SerializeField] private float acceleration = 12f;
+    [SerializeField] private float deceleration = 18f;
     [SerializeField] private float airAcceleration = 6f;
 
     [Header("Ground Check")]
@@ -20,35 +20,35 @@ public class PlayerController : NetworkBehaviour
     [Header("Visuals")]
     [SerializeField] private GameObject player1Visual;
     [SerializeField] private GameObject player2Visual;
-    [SerializeField] private Color      player1Color = Color.red;
-    [SerializeField] private Color      player2Color = Color.cyan;
-    [SerializeField] private Transform  player1SpawnPoint;
-    [SerializeField] private Transform  player2SpawnPoint;
+    [SerializeField] private Color player1Color = Color.red;
+    [SerializeField] private Color  player2Color = Color.cyan;
+    [SerializeField] private Transform player1SpawnPoint;
+    [SerializeField] private Transform player2SpawnPoint;
 
     [Header("Sabotage")]
-    [SerializeField] private float          freezeDuration  = 1f;
-    [SerializeField] private float          frozenSpeedMult = 0.2f;
-    [SerializeField] private Color          frozenColor     = new Color(0.7f, 0.9f, 1f);
+    [SerializeField] private float  freezeDuration  = 1f;
+    [SerializeField] private float  frozenSpeedMult = 0.2f;
+    [SerializeField] private Color   frozenColor  = new Color(0.7f, 0.9f, 1f);
     [SerializeField] private ParticleSystem freezeParticles;
-    [SerializeField] private GameObject     gunVisual;
-    [SerializeField] private NetworkObject  projectilePrefab;
-    [SerializeField] private Transform      gunHand;
+    [SerializeField] private GameObject   gunVisual;
+    [SerializeField] private NetworkObject projectilePrefab;
+    [SerializeField] private Transform   gunHand;
 
     public NetworkVariable<bool> ControlsFlipped = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> IsFrozen        = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> HasGun          = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> IsFrozen  = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> HasGun = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private PlayerInputActions input;
-    private Rigidbody2D        rb;
-    private Animator           animator;
+    private Rigidbody2D rb;
+    private Animator  animator;
     private SpriteRenderer[]   allRenderers;
-    private Vector2            moveInput;
-    private bool               isGrounded;
-    private bool               jumpQueued;
-    private bool               crouchInput;
-    private Vector3            spawnPoint;
-    private bool               facingLeft;
-    private Color              myColor;
+    private Vector2 moveInput;
+    private bool isGrounded;
+    private bool jumpQueued;
+    private bool crouchInput;
+    private Vector3 spawnPoint;
+    private bool  facingLeft;
+    private Color  myColor;
 
     private static readonly int HashSpeed  = Animator.StringToHash("Speed");
     private static readonly int HashGround = Animator.StringToHash("Grounded");
@@ -129,7 +129,7 @@ public class PlayerController : NetworkBehaviour
 
     private void SetupInput()
     {
-        input         = new PlayerInputActions();
+        input= new PlayerInputActions();
         input.devices = null;
         input.Player.Enable();
         input.Player.Jump.performed  += _ => jumpQueued = true;
@@ -152,19 +152,19 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // crouching — brake to a stop
+     
         if (crouchInput)
         {
-            float braked      = Mathf.MoveTowards(rb.linearVelocity.x, 0f, deceleration * Time.fixedDeltaTime);
+            float braked = Mathf.MoveTowards(rb.linearVelocity.x, 0f, deceleration * Time.fixedDeltaTime);
             rb.linearVelocity = new Vector2(braked, rb.linearVelocity.y);
-            jumpQueued        = false;
+            jumpQueued = false;
             return;
         }
 
         float speedMultiplier = IsFrozen.Value ? frozenSpeedMult : 1f;
-        float directionMult   = ControlsFlipped.Value ? -1f : 1f;
-        float targetSpeed     = moveInput.x * directionMult * moveSpeed * speedMultiplier;
-        float currentSpeed    = rb.linearVelocity.x;
+        float directionMult = ControlsFlipped.Value ? -1f : 1f;
+        float targetSpeed = moveInput.x * directionMult * moveSpeed * speedMultiplier;
+        float currentSpeed = rb.linearVelocity.x;
 
         float accelRate = isGrounded
             ? (Mathf.Abs(targetSpeed) > 0.01f ? acceleration    : deceleration)
@@ -173,12 +173,12 @@ public class PlayerController : NetworkBehaviour
         float newHorizontal   = Mathf.MoveTowards(currentSpeed, targetSpeed, accelRate * Time.fixedDeltaTime);
         rb.linearVelocity     = new Vector2(newHorizontal, rb.linearVelocity.y);
 
-        // flip entire rig via root scale
+     
         if (moveInput.x != 0)
         {
-            facingLeft           = newHorizontal < 0;
-            Vector3 s            = transform.localScale;
-            s.x                  = Mathf.Abs(s.x) * (facingLeft ? -1f : 1f);
+            facingLeft  = newHorizontal < 0;
+            Vector3 s = transform.localScale;
+            s.x = Mathf.Abs(s.x) * (facingLeft ? -1f : 1f);
             transform.localScale = s;
         }
 
@@ -215,7 +215,7 @@ public class PlayerController : NetworkBehaviour
         ControlsFlipped.Value = flipped;
     }
 
-    // server sets HasGun — NetworkVariable syncs visuals to all clients via OnHasGunChanged
+
     public void EquipGun()
     {
         if (!IsServer) return;
@@ -230,7 +230,7 @@ public class PlayerController : NetworkBehaviour
 
     private void TryShoot()
     {
-        if (!IsOwner)      return;
+        if (!IsOwner) return;
         if (!HasGun.Value) return;
         ShootServerRpc(facingLeft ? Vector2.left : Vector2.right);
         TriggerShootAnimClientRpc();
@@ -243,17 +243,14 @@ public class PlayerController : NetworkBehaviour
 
         HasGun.Value = false;
 
-        NetworkObject projectile = Instantiate(
-            projectilePrefab,
-            transform.position + (Vector3)(direction * 0.8f),
-            Quaternion.identity);
+        NetworkObject projectile = Instantiate( projectilePrefab, transform.position + (Vector3)(direction * 0.8f), Quaternion.identity);
 
         projectile.Spawn();
         projectile.GetComponent<ProjectileFreeze>().SetDirection(direction);
         AudioManager.Singleton?.PlayShoot();
     }
 
-    // trigger shoot animation on the shooting player's client only
+    // trigger shoot animation on the shooting player's client only... dont work
     [ClientRpc]
     private void TriggerShootAnimClientRpc()
     {
@@ -301,7 +298,7 @@ public class PlayerController : NetworkBehaviour
 
     private IEnumerator CameraShakeRoutine()
     {
-        Camera  cam       = Camera.main;
+        Camera  cam = Camera.main;
         Vector3 originPos = cam.transform.localPosition;
         float   elapsed   = 0f;
 
@@ -323,7 +320,7 @@ public class PlayerController : NetworkBehaviour
     public void SetSpawnPoint(Vector3 point)
     {
         if (!IsServer) return;
-        spawnPoint         = point;
+        spawnPoint= point;
         transform.position = point;
         SetSpawnPointClientRpc(point);
     }
@@ -335,7 +332,7 @@ public class PlayerController : NetworkBehaviour
     }
 
 
-    // Respawn
+    // respawn
 
     public void Die()
     {
@@ -361,14 +358,14 @@ public class PlayerController : NetworkBehaviour
     }
 
 
-    // helpers
+
 
     private void ApplyColor(Color color)
     {
         if (allRenderers == null) return;
         foreach (SpriteRenderer r in allRenderers)
         {
-            // skip gun hand children so gun keeps its own colors
+            // skip gun hand children so gun keeps its own colorsss
             if (gunHand != null && r.transform.IsChildOf(gunHand)) continue;
             r.color = color;
         }
