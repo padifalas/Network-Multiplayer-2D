@@ -2,6 +2,7 @@ using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 
@@ -10,6 +11,7 @@ public class Menu : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TMP_InputField ipInput;
     [SerializeField] private TMP_InputField portInput;
+    [SerializeField] private GameObject hostFirst;
 
     [Header("Defaults")]
     [SerializeField] private string defaultIP = "127.0.0.1";
@@ -17,6 +19,11 @@ public class Menu : MonoBehaviour
 
     [SerializeField] private UnityTransport transport;
     [SerializeField] private NetworkManager networkManager;
+
+    void Start()
+    {
+        EventSystem.current.SetSelectedGameObject(hostFirst);
+    }
 
     private void Awake()
     {
