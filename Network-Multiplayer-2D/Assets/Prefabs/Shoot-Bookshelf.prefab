@@ -207,7 +207,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 1.0272373, y: 0}
+  m_Offset: {x: 2.2801356, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -217,7 +217,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 3.5854547, y: 3.31}
+  m_Size: {x: 6.0912523, y: 3.31}
   m_EdgeRadius: 0
 --- !u!114 &5251145192253278428
 MonoBehaviour:
@@ -265,6 +265,9 @@ MonoBehaviour:
   sinkDetectRadius: 2
   sinkResetDelay: 2
   killboxTransform: {fileID: 0}
+  chandelierRb: {fileID: 0}
+  chandelierShakeDuration: 0.4
+  chandelierShakeMagnitude: 0.25
   wallMoveSpeed: 8
   wallChargeDelay: 0.3
   bookSpawnPoint: {fileID: 2782932646955706692}
