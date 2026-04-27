@@ -20,43 +20,42 @@ public class PlayerController : NetworkBehaviour
     [Header("Visuals")]
     [SerializeField] private GameObject player1Visual;
     [SerializeField] private GameObject player2Visual;
-    [SerializeField] private Color player1Color  = Color.red;
-    [SerializeField] private Color player2Color = Color.cyan;
-    [SerializeField] private Transform player1SpawnPoint;
-    [SerializeField] private Transform player2SpawnPoint;
+    [SerializeField] private Color      player1Color = Color.red;
+    [SerializeField] private Color      player2Color = Color.cyan;
+    [SerializeField] private Transform  player1SpawnPoint;
+    [SerializeField] private Transform  player2SpawnPoint;
 
     [Header("Sabotage")]
-    [SerializeField] private float freezeDuration  = 1f;
-    [SerializeField] private float frozenSpeedMult = 0.2f;
-    [SerializeField] private Color frozenColor= new Color(0.7f, 0.9f, 1f);
+    [SerializeField] private float          freezeDuration  = 1f;
+    [SerializeField] private float          frozenSpeedMult = 0.2f;
+    [SerializeField] private Color          frozenColor     = new Color(0.7f, 0.9f, 1f);
     [SerializeField] private ParticleSystem freezeParticles;
-    [SerializeField] private GameObject gunVisual;
+    [SerializeField] private GameObject     gunVisual;
     [SerializeField] private NetworkObject  projectilePrefab;
-    [SerializeField] private Transform  gunHand;
+    [SerializeField] private Transform      gunHand;
 
     public NetworkVariable<bool> ControlsFlipped = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> IsFrozen        = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> HasGun          = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private PlayerInputActions input;
-    private Rigidbody2D  rb;
-    private Animator animator;
-    private SpriteRenderer[]  allRenderers;
-    private Vector2  moveInput;
-    private bool  isGrounded;
-    private bool  jumpQueued;
-    private bool crouchInput;
-    private Vector3  spawnPoint;
-    private bool  hasGun;
-    private bool  facingLeft;
-    private Color  myColor;
+    private Rigidbody2D        rb;
+    private Animator           animator;
+    private SpriteRenderer[]   allRenderers;
+    private Vector2            moveInput;
+    private bool               isGrounded;
+    private bool               jumpQueued;
+    private bool               crouchInput;
+    private Vector3            spawnPoint;
+    private bool               facingLeft;
+    private Color              myColor;
 
-
-    private static readonly int HashSpeed   = Animator.StringToHash("Speed");
-    private static readonly int HashGround  = Animator.StringToHash("Grounded");
-    private static readonly int HashJump  = Animator.StringToHash("Jumping");
+    private static readonly int HashSpeed  = Animator.StringToHash("Speed");
+    private static readonly int HashGround = Animator.StringToHash("Grounded");
+    private static readonly int HashJump   = Animator.StringToHash("Jumping");
     private static readonly int HashCrouch = Animator.StringToHash("Crouching");
-    private static readonly int HashHasGun  = Animator.StringToHash("HasGun");
-    private static readonly int HashShoot = Animator.StringToHash("Shoot");
+    private static readonly int HashHasGun = Animator.StringToHash("HasGun");
+    private static readonly int HashShoot  = Animator.StringToHash("Shoot");
 
 
     private void Awake()
@@ -88,15 +87,13 @@ public class PlayerController : NetworkBehaviour
 
         bool isPlayerOne = OwnerClientId == 0;
 
-        // activate the correct visual  for this player
+        // activate the correct visual rig for this player
         if (player1Visual != null) player1Visual.SetActive(isPlayerOne);
         if (player2Visual != null) player2Visual.SetActive(!isPlayerOne);
 
-       
         allRenderers = GetComponentsInChildren<SpriteRenderer>();
-        animator  = GetComponentInChildren<Animator>();
+        animator     = GetComponentInChildren<Animator>();
 
-       
         myColor = isPlayerOne ? player1Color : player2Color;
         ApplyColor(myColor);
 
@@ -104,7 +101,7 @@ public class PlayerController : NetworkBehaviour
         Transform selectedSpawn = isPlayerOne ? player1SpawnPoint : player2SpawnPoint;
         if (selectedSpawn != null)
         {
-            spawnPoint = selectedSpawn.position;
+            spawnPoint         = selectedSpawn.position;
             transform.position = spawnPoint;
         }
         else
@@ -113,6 +110,7 @@ public class PlayerController : NetworkBehaviour
         }
 
         IsFrozen.OnValueChanged += OnFrozenChanged;
+        HasGun.OnValueChanged   += OnHasGunChanged;
 
         if (!IsOwner) return;
 
@@ -122,6 +120,7 @@ public class PlayerController : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         IsFrozen.OnValueChanged -= OnFrozenChanged;
+        HasGun.OnValueChanged   -= OnHasGunChanged;
         if (IsOwner) input?.Dispose();
     }
 
@@ -130,10 +129,10 @@ public class PlayerController : NetworkBehaviour
 
     private void SetupInput()
     {
-        input  = new PlayerInputActions();
+        input         = new PlayerInputActions();
         input.devices = null;
         input.Player.Enable();
-        input.Player.Jump.performed  += _ => jumpQueued  = true;
+        input.Player.Jump.performed  += _ => jumpQueued = true;
         input.Player.Shoot.performed += _ => TryShoot();
     }
 
@@ -142,10 +141,8 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        moveInput  = input.Player.Move.ReadValue<Vector2>();
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-
-     
+        moveInput   = input.Player.Move.ReadValue<Vector2>();
+        isGrounded  = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         crouchInput = moveInput.y < -0.5f;
 
         UpdateAnimator();
@@ -155,35 +152,33 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        
+        // crouching — brake to a stop
         if (crouchInput)
         {
-            float braked = Mathf.MoveTowards( rb.linearVelocity.x, 0f, deceleration * Time.fixedDeltaTime);
+            float braked      = Mathf.MoveTowards(rb.linearVelocity.x, 0f, deceleration * Time.fixedDeltaTime);
             rb.linearVelocity = new Vector2(braked, rb.linearVelocity.y);
-            jumpQueued  = false;
+            jumpQueued        = false;
             return;
         }
 
         float speedMultiplier = IsFrozen.Value ? frozenSpeedMult : 1f;
-        float directionMult = ControlsFlipped.Value ? -1f : 1f;
-        float targetSpeed  = moveInput.x * directionMult * moveSpeed * speedMultiplier;
-        float currentSpeed = rb.linearVelocity.x;
+        float directionMult   = ControlsFlipped.Value ? -1f : 1f;
+        float targetSpeed     = moveInput.x * directionMult * moveSpeed * speedMultiplier;
+        float currentSpeed    = rb.linearVelocity.x;
 
         float accelRate = isGrounded
             ? (Mathf.Abs(targetSpeed) > 0.01f ? acceleration    : deceleration)
             : (Mathf.Abs(targetSpeed) > 0.01f ? airAcceleration : deceleration * 0.5f);
 
-        float newHorizontal = Mathf.MoveTowards(
-            currentSpeed, targetSpeed, accelRate * Time.fixedDeltaTime);
+        float newHorizontal   = Mathf.MoveTowards(currentSpeed, targetSpeed, accelRate * Time.fixedDeltaTime);
+        rb.linearVelocity     = new Vector2(newHorizontal, rb.linearVelocity.y);
 
-        rb.linearVelocity = new Vector2(newHorizontal, rb.linearVelocity.y);
-
-        // flip whole thing via root scale
+        // flip entire rig via root scale
         if (moveInput.x != 0)
         {
-            facingLeft  = newHorizontal < 0;
-            Vector3 s  = transform.localScale;
-            s.x = Mathf.Abs(s.x) * (facingLeft ? -1f : 1f);
+            facingLeft           = newHorizontal < 0;
+            Vector3 s            = transform.localScale;
+            s.x                  = Mathf.Abs(s.x) * (facingLeft ? -1f : 1f);
             transform.localScale = s;
         }
 
@@ -208,9 +203,9 @@ public class PlayerController : NetworkBehaviour
 
         animator.SetFloat(HashSpeed,  Mathf.Abs(rb.linearVelocity.x));
         animator.SetBool(HashGround,  isGrounded);
-        animator.SetBool(HashJump, rb.linearVelocity.y > 0.1f && !isGrounded);
+        animator.SetBool(HashJump,    rb.linearVelocity.y > 0.1f && !isGrounded);
         animator.SetBool(HashCrouch,  crouchInput && isGrounded);
-        animator.SetBool(HashHasGun,  hasGun);
+        animator.SetBool(HashHasGun,  HasGun.Value);
     }
 
 
@@ -220,24 +215,23 @@ public class PlayerController : NetworkBehaviour
         ControlsFlipped.Value = flipped;
     }
 
+    // server sets HasGun — NetworkVariable syncs visuals to all clients via OnHasGunChanged
     public void EquipGun()
     {
         if (!IsServer) return;
-        EquipGunClientRpc();
+        HasGun.Value = true;
     }
 
-    [ClientRpc]
-    private void EquipGunClientRpc()
+    private void OnHasGunChanged(bool previous, bool current)
     {
-        if (!IsOwner) return;
-        hasGun = true;
-        if (gunVisual != null) gunVisual.SetActive(true);
+        if (gunVisual != null) gunVisual.SetActive(current);
+        if (animator  != null) animator.SetBool(HashHasGun, current);
     }
 
     private void TryShoot()
     {
-        if (!IsOwner) return;
-        if (!hasGun)  return;
+        if (!IsOwner)      return;
+        if (!HasGun.Value) return;
         ShootServerRpc(facingLeft ? Vector2.left : Vector2.right);
         TriggerShootAnimClientRpc();
     }
@@ -245,8 +239,9 @@ public class PlayerController : NetworkBehaviour
     [ServerRpc]
     private void ShootServerRpc(Vector2 direction)
     {
-        if (!hasGun) return;
-        hasGun = false;
+        if (!HasGun.Value) return;
+
+        HasGun.Value = false;
 
         NetworkObject projectile = Instantiate(
             projectilePrefab,
@@ -255,19 +250,10 @@ public class PlayerController : NetworkBehaviour
 
         projectile.Spawn();
         projectile.GetComponent<ProjectileFreeze>().SetDirection(direction);
-
-        DisarmClientRpc();
         AudioManager.Singleton?.PlayShoot();
     }
 
-    [ClientRpc]
-    private void DisarmClientRpc()
-    {
-        hasGun = false;
-        if (gunVisual != null) gunVisual.SetActive(false);
-    }
-
-    // trigger shoot animation on the shooting player's client
+    // trigger shoot animation on the shooting player's client only
     [ClientRpc]
     private void TriggerShootAnimClientRpc()
     {
@@ -315,7 +301,7 @@ public class PlayerController : NetworkBehaviour
 
     private IEnumerator CameraShakeRoutine()
     {
-        Camera  cam  = Camera.main;
+        Camera  cam       = Camera.main;
         Vector3 originPos = cam.transform.localPosition;
         float   elapsed   = 0f;
 
@@ -326,8 +312,7 @@ public class PlayerController : NetworkBehaviour
         {
             float x = Random.Range(-1f, 1f) * magnitude;
             float y = Random.Range(-1f, 1f) * magnitude;
-            cam.transform.localPosition = new Vector3(
-                originPos.x + x, originPos.y + y, originPos.z);
+            cam.transform.localPosition = new Vector3(originPos.x + x, originPos.y + y, originPos.z);
             elapsed += Time.deltaTime;
             yield return null;
         }
@@ -377,14 +362,15 @@ public class PlayerController : NetworkBehaviour
 
 
     // helpers
+
     private void ApplyColor(Color color)
     {
-    if (allRenderers == null) return;
-    foreach (SpriteRenderer r in allRenderers)
-    {
-       
-        if (gunHand != null && r.transform.IsChildOf(gunHand)) continue;
-        r.color = color;
-    }
+        if (allRenderers == null) return;
+        foreach (SpriteRenderer r in allRenderers)
+        {
+            // skip gun hand children so gun keeps its own colors
+            if (gunHand != null && r.transform.IsChildOf(gunHand)) continue;
+            r.color = color;
+        }
     }
 }
