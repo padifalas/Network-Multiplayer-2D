@@ -133,7 +133,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Obstacle
   ShowTopMostFoldoutHeaderGroup: 1
-  obstacleType: 2
+  obstacleType: 5
   fireExpandScale: 2.5
   fireExpandSpeed: 3
   fireDetectRadius: 3
@@ -143,6 +143,8 @@ MonoBehaviour:
   killboxTransform: {fileID: 0}
   wallMoveSpeed: 8
   wallChargeDelay: 0
+  bookSpawnPoint: {fileID: 0}
+  bookProjectilePrefab: {fileID: 0}
   obstacleParticles: {fileID: 0}
 --- !u!61 &332820980873437667
 BoxCollider2D:

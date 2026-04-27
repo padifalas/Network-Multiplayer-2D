@@ -1,66 +1,144 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 public class MainMenu : MonoBehaviour
 {
-    [Header("Panels")]
-    [SerializeField] private GameObject mainPanel;
-    [SerializeField] private GameObject settingsPanel;
-    [SerializeField] private GameObject creditsPanel;
+    [Header("Canvas's")]
+    [SerializeField] private GameObject mainCanvasGO;
+    [SerializeField] private GameObject howToPlayCanvasGO;
+    [SerializeField] private GameObject settingsCanvasGO;
+    [SerializeField] private GameObject trapsCanvasGO;
+    [SerializeField] private GameObject creditsCanvasGO;
 
-    [Header("Scene Names")]
-    [SerializeField] private string lobbySceneName = "Lobby";
+    [Header("First Selected Options")]
+    [SerializeField] private GameObject startGameFirst;
+    [SerializeField] private GameObject howToPlayFirst;
+    [SerializeField] private GameObject settingsFirst;
+    [SerializeField] private GameObject trapsFirst;
+    [SerializeField] private GameObject creditsFirst;
 
 
     private void Start()
     {
-       
-        ShowMain();
+
+        mainCanvasGO.SetActive(true);
+        howToPlayCanvasGO.SetActive(false);
+        settingsCanvasGO.SetActive(false);
+        trapsCanvasGO.SetActive(false);
+        creditsCanvasGO.SetActive(false);
+
+        EventSystem.current.SetSelectedGameObject(startGameFirst);
+
         AudioManager.Singleton?.PlayMenuMusic();
     }
 
-
-
-
-    public void OnStartPressed()
+    #region Scene Loader
+    public void LoadScene(string sceneName)
     {
-        SceneManager.LoadScene(lobbySceneName);
+        SceneManager.LoadScene(sceneName);
+        Debug.Log($"Loading scene: {sceneName}");
+    }
+    #endregion
+
+    #region Canvas Activations/Deactivations
+
+    private void OpenMainMenu()
+    {
+        mainCanvasGO.SetActive(true);
+        howToPlayCanvasGO.SetActive(false);
+        settingsCanvasGO.SetActive(false);
+        trapsCanvasGO.SetActive(false);
+        creditsCanvasGO.SetActive(false);
+
+        EventSystem.current.SetSelectedGameObject(startGameFirst);
+
     }
 
-    public void OnSettingsPressed()
+    private void OpenHowToPlay()
     {
-        mainPanel.SetActive(false);
-        settingsPanel.SetActive(true);
+        mainCanvasGO.SetActive(false);
+        howToPlayCanvasGO.SetActive(true);
+        settingsCanvasGO.SetActive(false);
+        trapsCanvasGO.SetActive(false);
+        creditsCanvasGO.SetActive(false);
+
+        EventSystem.current.SetSelectedGameObject(howToPlayFirst);
     }
 
-    public void OnCreditsPressed()
+    private void OpenSettings()
     {
-        mainPanel.SetActive(false);
-        creditsPanel.SetActive(true);
+        mainCanvasGO.SetActive(false);
+        howToPlayCanvasGO.SetActive(false);
+        settingsCanvasGO.SetActive(true);
+        trapsCanvasGO.SetActive(false);
+        creditsCanvasGO.SetActive(false);
+
+        EventSystem.current.SetSelectedGameObject(settingsFirst);
     }
 
-    public void OnBackPressed()
+    private void OpenTraps()
     {
-        ShowMain();
+        mainCanvasGO.SetActive(false);
+        howToPlayCanvasGO.SetActive(false);
+        settingsCanvasGO.SetActive(false);
+        trapsCanvasGO.SetActive(true);
+        creditsCanvasGO.SetActive(false);
+
+        EventSystem.current.SetSelectedGameObject(trapsFirst);
     }
 
-    public void OnQuitPressed()
+    private void OpenCredits()
+    {
+        mainCanvasGO.SetActive(false);
+        howToPlayCanvasGO.SetActive(false);
+        settingsCanvasGO.SetActive(false);
+        trapsCanvasGO.SetActive(false);
+        creditsCanvasGO.SetActive(true);
+
+        EventSystem.current.SetSelectedGameObject(creditsFirst);
+    }
+
+    #endregion
+
+    #region Main Menu Actions
+
+    public void OnHowToPlayPress()
+    {
+        OpenHowToPlay();
+    }
+
+    public void OnSettingsPress()
+    {
+        OpenSettings();
+    }
+
+    public void OnTrapsPress()
+    {
+        OpenTraps();
+    }
+
+    public void OnCreditsPress()
+    {
+        OpenCredits();
+    }
+
+    public void BackToMain()
+    {
+        OpenMainMenu();
+    }
+
+    public void OnQuitPress()
     {
         Application.Quit();
 
-       
+
+
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #endif
     }
 
+    #endregion
 
- 
-
-    private void ShowMain()
-    {
-        if (mainPanel)mainPanel.SetActive(true);
-        if (settingsPanel) settingsPanel.SetActive(false);
-        if (creditsPanel)  creditsPanel.SetActive(false);
-    }
 }
