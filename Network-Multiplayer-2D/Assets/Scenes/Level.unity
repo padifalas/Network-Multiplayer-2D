@@ -2641,7 +2641,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GoalDoor
   ShowTopMostFoldoutHeaderGroup: 1
   player1WinPanel: {fileID: 855392381}
-  player2WinPanel: {fileID: 0}
+  player2WinPanel: {fileID: 1280643295}
   nextRoundDelay: 3
   mainMenuScene: Start
 --- !u!4 &726303781
@@ -17069,7 +17069,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1148304136357439598, guid: 843eb52929f7d44459608561df210d54, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 23.760242
+      value: 18.86
       objectReference: {fileID: 0}
     - target: {fileID: 1148304136357439598, guid: 843eb52929f7d44459608561df210d54, type: 3}
       propertyPath: m_LocalPosition.y

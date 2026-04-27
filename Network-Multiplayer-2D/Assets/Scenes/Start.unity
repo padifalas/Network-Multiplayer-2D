@@ -940,8 +940,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -0.38000488, y: 0}
+  m_SizeDelta: {x: 0.7599957, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &455953062
 MonoBehaviour:
@@ -963,7 +963,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1832582978824267753, guid: a876337b60569e94491093e01d9d2ffb, type: 3}
+  m_Sprite: {fileID: 543299329625392905, guid: 3d75196abc02b9940a8ccd0742e18441, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2771,8 +2771,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   musicSource: {fileID: 978059602}
-  menuMusic: {fileID: 0}
-  gameMusic: {fileID: 0}
+  menuMusic: {fileID: 8300000, guid: c5b4295d4f16f5042b8cb4536d552c57, type: 3}
+  gameMusic: {fileID: 8300000, guid: c5b4295d4f16f5042b8cb4536d552c57, type: 3}
   sfxSource: {fileID: 1392703250}
   deathClip: {fileID: 8300000, guid: 1b2082f9a51cd014c8911eeceb433c99, type: 3}
   respawnClip: {fileID: 8300000, guid: 2b5d64f9a1eeef94295824c5bd4d90a1, type: 3}
