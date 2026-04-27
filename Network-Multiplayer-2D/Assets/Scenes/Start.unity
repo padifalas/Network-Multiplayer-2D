@@ -2771,15 +2771,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   musicSource: {fileID: 978059602}
-  menuMusic: {fileID: 8300000, guid: c5b4295d4f16f5042b8cb4536d552c57, type: 3}
-  gameMusic: {fileID: 8300000, guid: c5b4295d4f16f5042b8cb4536d552c57, type: 3}
+  menuMusic: {fileID: 8300000, guid: f62834c74b67c9c4992f1d0f6cbb30e4, type: 3}
+  gameMusic: {fileID: 8300000, guid: f62834c74b67c9c4992f1d0f6cbb30e4, type: 3}
   sfxSource: {fileID: 1392703250}
   deathClip: {fileID: 8300000, guid: 1b2082f9a51cd014c8911eeceb433c99, type: 3}
   respawnClip: {fileID: 8300000, guid: 2b5d64f9a1eeef94295824c5bd4d90a1, type: 3}
-  knockbackClip: {fileID: 8300000, guid: 1b4cdffba3664c245b741e5324ad2529, type: 3}
+  knockbackClip: {fileID: 8300000, guid: 7727e6b0b7e5a4f49ae940780ae232ca, type: 3}
   freezeClip: {fileID: 8300000, guid: 05f474c4e3f637443b2efe2e840f94a1, type: 3}
   shootClip: {fileID: 8300000, guid: 562f5463f157a7b429f393d2f862badf, type: 3}
-  fireClip: {fileID: 8300000, guid: 8b798d5b2f3de324d9ba1c83c44b7be7, type: 3}
+  fireClip: {fileID: 8300000, guid: 80e7dea590e64674ba1b5f7021fc9073, type: 3}
   sinkClip: {fileID: 8300000, guid: b7d35573cfcc3a24fa9fd3ca58af8b02, type: 3}
   wallClip: {fileID: 8300000, guid: 9f271e192188cfb4bb2c257311dff978, type: 3}
   bookClip: {fileID: 8300000, guid: d85894522c38ed54a9fe850d53fc8bac, type: 3}
