@@ -107,7 +107,6 @@
   <Project Path="Unity.Multiplayer.Tools.NetworkProfiler.Runtime.csproj" />
   <Project Path="Unity.Services.Core.Environments.Internal.csproj" />
   <Project Path="Unity.InputSystem.ForUI.csproj" />
-  <Project Path="Gentleland.SteampunkUI.DemoAndExample.csproj" />
   <Project Path="Unity.Services.Core.Scheduler.csproj" />
   <Project Path="Unity.Collections.CodeGen.csproj" />
   <Project Path="Unity.Services.Core.Telemetry.csproj" />
@@ -147,7 +146,6 @@
   <Project Path="Unity.Netcode.PackageChecker.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
-  <Project Path="Gentleland.Utils.SteampunkUI.csproj" />
   <Project Path="Unity.InternalAPIEngineBridge.004.csproj" />
   <Project Path="Unity.Multiplayer.Tools.Adapters.Ngo1.csproj" />
   <Project Path="Unity.2D.Sprite.AIIntegration.Editor.csproj" />
