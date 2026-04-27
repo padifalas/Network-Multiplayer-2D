@@ -147,8 +147,8 @@
   <Project Path="Unity.Netcode.PackageChecker.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
-  <Project Path="Unity.InternalAPIEngineBridge.004.csproj" />
   <Project Path="Gentleland.Utils.SteampunkUI.csproj" />
+  <Project Path="Unity.InternalAPIEngineBridge.004.csproj" />
   <Project Path="Unity.Multiplayer.Tools.Adapters.Ngo1.csproj" />
   <Project Path="Unity.2D.Sprite.AIIntegration.Editor.csproj" />
   <Project Path="Unity.Multiplayer.Tools.NetStatsReporting.csproj" />
