@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 using System.Collections;
-using UnityEditor.Callbacks;
+
 
 public class Obstacle : NetworkBehaviour
 {
@@ -22,7 +22,10 @@ public class Obstacle : NetworkBehaviour
     [SerializeField] private Transform killboxTransform;
 
     [Header("Chandelier Settings")]
-    private Rigidbody2D rb;
+[SerializeField] private Rigidbody2D chandelierRb;
+    private bool chandelierDropped;
+    [SerializeField] private float chandelierShakeDuration  = 0.4f;
+    [SerializeField] private float chandelierShakeMagnitude = 0.25f;
 
     [Header("Pushing Wall")]
     [SerializeField] private float wallMoveSpeed = 8f;
@@ -56,14 +59,11 @@ public class Obstacle : NetworkBehaviour
         originPosition = transform.position;
         originScale = transform.localScale;
 
-        if (obstacleType == ObstacleType.Chandelier)
-        {
-            rb = GetComponent<Rigidbody2D>();
-
-            if (rb != null)
-                rb.simulated = false;
-
-        }
+if (obstacleType == ObstacleType.Chandelier && chandelierRb != null)
+{
+    chandelierRb.bodyType = RigidbodyType2D.Static;
+}
+       
 
         if (obstacleType == ObstacleType.TeleportingWall)
             SetWallVisible(false);
@@ -82,7 +82,6 @@ public class Obstacle : NetworkBehaviour
         {
             case ObstacleType.Fire: HandleFire(); break;
             case ObstacleType.Sink: HandleSink(); break;
-            case ObstacleType.Chandelier: HandleFallingChandelier(); break;
             case ObstacleType.TeleportingWall: HandleWall(); break;
 
         }
@@ -128,11 +127,51 @@ public class Obstacle : NetworkBehaviour
         }
     }
 
-    private void HandleFallingChandelier()
+private void HandleFallingChandelier()
+{
+    if (!IsServer) return;
+    if (chandelierDropped) return;
+
+    chandelierDropped = true;
+
+    // Switch rigidbody to dynamic so it falls
+    if (chandelierRb != null)
+        chandelierRb.bodyType = RigidbodyType2D.Dynamic;
+
+    // Tell clients to also apply shake
+    HandleFallingChandelierClientRpc();
+}
+
+[ClientRpc]
+private void HandleFallingChandelierClientRpc()
+{
+    if (chandelierRb != null)
+        chandelierRb.bodyType = RigidbodyType2D.Dynamic;
+
+    // Trigger screen shake effect
+    StartCoroutine(ChandelierScreenShake());
+}
+
+private IEnumerator ChandelierScreenShake()
+{
+    Camera cam  = Camera.main;
+    Vector3 originPos = cam.transform.localPosition;
+    float  elapsed  = 0f;
+
+    while (elapsed < chandelierShakeDuration)
     {
-        if (rb != null && !rb.simulated)
-            rb.simulated = true;
+        float x = Random.Range(-1f, 1f) * chandelierShakeMagnitude;
+        float y = Random.Range(-1f, 1f) * chandelierShakeMagnitude;
+
+        cam.transform.localPosition = new Vector3(originPos.x + x,originPos.y + y,originPos.z);
+
+        elapsed += Time.deltaTime;
+        yield return null;
     }
+
+    cam.transform.localPosition = originPos;
+}
+
 
     private IEnumerator SinkRoutine()
     {
@@ -231,11 +270,14 @@ public class Obstacle : NetworkBehaviour
                 }
                 break;
 
-            case ObstacleType.Chandelier:
-                PlayerController nearest = GetNearestPlayer(2f);
-                if (nearest != null)
-                    HandleFallingChandelier();
-                break;
+             case ObstacleType.Chandelier:
+             if (!IsServer) return;
+          
+             RequestDeathParticlesServerRpc(other.transform.position);
+            
+            //  Debug.Log("chandelier trigger hit — calling HandleFallingChandelier");
+            HandleFallingChandelier();
+             break;
 
             case ObstacleType.Bookshelf:
                 if (!IsServer) return;
@@ -243,9 +285,7 @@ public class Obstacle : NetworkBehaviour
 
 
                 float playerX = player.transform.position.x;
-                float spawnX = bookSpawnPoint != null
-                    ? bookSpawnPoint.position.x
-                    : transform.position.x;
+                float spawnX = bookSpawnPoint != null? bookSpawnPoint.position.x : transform.position.x;
                 Vector2 fireDirection = playerX > spawnX ? Vector2.right : Vector2.left;
 
                 FireBook(fireDirection);
@@ -268,6 +308,71 @@ public class Obstacle : NetworkBehaviour
                 break;
         }
     }
+
+   private void OnCollisionEnter2D(Collision2D collision)
+{
+    if (obstacleType != ObstacleType.Chandelier) return;
+    if (!IsServer) return;
+
+    PlayerController player = collision.collider.GetComponent<PlayerController>();
+
+    if (player != null && player.IsOwner)
+    {
+    
+        player.Die();
+        RequestDeathParticlesServerRpc(player.transform.position);
+        AudioManager.Singleton?.PlayFallingChandelier();
+    }
+    else
+    {
+       
+        RequestGroundImpactParticlesServerRpc(transform.position);
+        AudioManager.Singleton?.PlayFallingChandelier();
+    }
+
+
+    ImpactShakeClientRpc();
+
+   
+    StartCoroutine(DestroyChandelierAfterDelay());
+}
+
+[Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+private void RequestGroundImpactParticlesServerRpc(Vector3 position)
+{
+    PlayGroundImpactParticlesClientRpc(position);
+}
+
+[ClientRpc]
+private void PlayGroundImpactParticlesClientRpc(Vector3 position)
+{
+    if (obstacleParticles == null) return;
+
+    // Optionally use a different particle prefab for dust/debris
+    obstacleParticles.transform.position = position;
+    obstacleParticles.Play();
+}
+
+[ClientRpc]
+private void ImpactShakeClientRpc()
+{
+    StartCoroutine(ChandelierScreenShake());
+}
+
+private IEnumerator DestroyChandelierAfterDelay()
+{
+    yield return new WaitForSeconds(2f);
+
+    if (IsServer)
+    {
+        NetworkObject netObj = GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsSpawned)
+            netObj.Despawn();
+        else
+            Destroy(gameObject);
+    }
+}
+ 
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void RequestDeathParticlesServerRpc(Vector3 position)

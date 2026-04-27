@@ -22,6 +22,7 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip   sinkClip;
     [SerializeField] private AudioClip   wallClip;
     [SerializeField] private AudioClip   bookClip;
+     [SerializeField] private AudioClip   fallingChandelierClip;
 
     [Header("Goal")]
     [SerializeField] private AudioClip   goalClip;
@@ -84,8 +85,7 @@ public class AudioManager : MonoBehaviour
     public void PlaySink() => PlaySFX(sinkClip);
     public void PlayWall() => PlaySFX(wallClip);
     public void PlayBook()=> PlaySFX(bookClip);
-
-
+    public void PlayFallingChandelier() => PlaySFX(fallingChandelierClip);
 
 
     public void PlayGoal() => PlaySFX(goalClip);

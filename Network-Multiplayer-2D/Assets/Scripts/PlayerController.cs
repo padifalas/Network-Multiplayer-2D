@@ -43,18 +43,14 @@ public class PlayerController : NetworkBehaviour
     private Vector3 spawnPoint;
     private bool hasGun;
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Awake – find spawn points by name if not assigned in the Inspector
-    // ──────────────────────────────────────────────────────────────────────────
+
     private void Awake()
     {
         if (player1SpawnPoint == null)
-            player1SpawnPoint = FindSceneSpawnPoint(
-                "Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint", "P1Spawn");
+            player1SpawnPoint = FindSceneSpawnPoint( "Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint", "P1Spawn");
 
         if (player2SpawnPoint == null)
-            player2SpawnPoint = FindSceneSpawnPoint(
-                "Player2SpawnPoint", "Player2Spawn", "P2SpawnPoint", "P2Spawn");
+            player2SpawnPoint = FindSceneSpawnPoint( "Player2SpawnPoint", "Player2Spawn", "P2SpawnPoint", "P2Spawn");
     }
 
     private Transform FindSceneSpawnPoint(params string[] names)
@@ -68,9 +64,7 @@ public class PlayerController : NetworkBehaviour
         return null;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  OnNetworkSpawn
-    // ──────────────────────────────────────────────────────────────────────────
+
     public override void OnNetworkSpawn()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -89,7 +83,7 @@ public class PlayerController : NetworkBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PlayerController] No spawn point for {(isPlayerOne ? "P1" : "P2")} – using current position.", this);
+            // Debug.LogWarning($"[PlayerController] No spawn point for {(isPlayerOne ? "P1" : "P2")} – using current position.", this);
             spawnPoint = transform.position;
         }
 
@@ -98,7 +92,7 @@ public class PlayerController : NetworkBehaviour
 
         IsFrozen.OnValueChanged += OnFrozenChanged;
 
-        // Only the owning client sets up input.
+      
         if (!IsOwner) return;
 
         SetupInput();
@@ -110,15 +104,15 @@ public class PlayerController : NetworkBehaviour
         if (IsOwner) input?.Dispose();
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Input setup – NO device filter; either player uses any keyboard/gamepad
-    // ──────────────────────────────────────────────────────────────────────────
+    
+    //  Input setup –either player uses any keyboard/gamepad
+   
     private void SetupInput()
     {
         input = new PlayerInputActions();
 
-        // Clear any device restrictions baked into the asset so both players
-        // can freely use any connected keyboard or gamepad.
+     
+        // can  use any connected keyboard or gamepad.
         input.devices = null;
 
         input.Player.Enable();
@@ -126,13 +120,10 @@ public class PlayerController : NetworkBehaviour
         input.Player.Jump.performed  += _ => jumpQueued = true;
         input.Player.Shoot.performed += _ => TryShoot();
 
-        Debug.Log($"[PlayerController] Input ready for OwnerClientId={OwnerClientId}. " +
-                  $"Gamepads={Gamepad.all.Count}, Keyboards detected via InputSystem.");
+        // Debug.Log($"[for PlayerController script] Input ready for OwnerClientId={OwnerClientId}. " +  $"Gamepads={Gamepad.all.Count}, Keyboards detected via InputSystem.");
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Update / FixedUpdate
-    // ──────────────────────────────────────────────────────────────────────────
+
     private void Update()
     {
         if (!IsOwner) return;
@@ -146,21 +137,19 @@ public class PlayerController : NetworkBehaviour
         if (!IsOwner) return;
 
         float speedMultiplier = IsFrozen.Value ? frozenSpeedMult : 1f;
-        float direction       = ControlsFlipped.Value ? -1f : 1f;
-        float horizontal      = moveInput.x * direction * moveSpeed * speedMultiplier;
+        float direction = ControlsFlipped.Value ? -1f : 1f;
+        float horizontal = moveInput.x * direction * moveSpeed * speedMultiplier;
 
         rb.linearVelocity = new Vector2(horizontal, rb.linearVelocity.y);
 
-        // Flip sprite
-        if (moveInput.x != 0)
-            sr.flipX = horizontal < 0;
+    
+        if (moveInput.x != 0) sr.flipX = horizontal < 0;
 
-        // Flip gun hand to match facing direction
+       
         if (gunHand != null)
         {
             Vector3 s = gunHand.localScale;
-            gunHand.localScale = new Vector3(
-                horizontal < 0 ? -Mathf.Abs(s.x) : Mathf.Abs(s.x), s.y, s.z);
+            gunHand.localScale = new Vector3(  sr.flipX ? -Mathf.Abs(s.x) : Mathf.Abs(s.x), s.y, s.z);
         }
 
         // Jump
@@ -170,18 +159,14 @@ public class PlayerController : NetworkBehaviour
         jumpQueued = false;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Sabotage – Flip Controls
-    // ──────────────────────────────────────────────────────────────────────────
+
     public void FlipControls(bool flipped)
     {
         if (!IsServer) return;
         ControlsFlipped.Value = flipped;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Sabotage – Gun / Shoot
-    // ──────────────────────────────────────────────────────────────────────────
+
     public void EquipGun()
     {
         if (!IsServer) return;
@@ -228,9 +213,6 @@ public class PlayerController : NetworkBehaviour
         if (gunVisual != null) gunVisual.SetActive(false);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Sabotage – Freeze
-    // ──────────────────────────────────────────────────────────────────────────
     public void ApplyFreeze()
     {
         if (!IsServer) return;
@@ -254,9 +236,7 @@ public class PlayerController : NetworkBehaviour
         if (!current &&  freezeParticles.isPlaying) freezeParticles.Stop();
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Knockback
-    // ──────────────────────────────────────────────────────────────────────────
+
     public void ApplyKnockback(Vector2 direction, float force)
     {
         if (!IsServer) return;
@@ -270,12 +250,12 @@ public class PlayerController : NetworkBehaviour
         if (!IsOwner) return;
         rb.linearVelocity = new Vector2(direction.x * force, force * 0.5f);
         StartCoroutine(CameraShakeRoutine());
-        // Note: audio already fired server-side; skip duplicate call here.
+       
     }
 
     private IEnumerator CameraShakeRoutine()
     {
-        Camera cam         = Camera.main;
+        Camera cam = Camera.main;
         Vector3 originPos  = cam.transform.localPosition;
         float elapsed      = 0f;
         const float duration  = 0.3f;
@@ -293,9 +273,7 @@ public class PlayerController : NetworkBehaviour
         cam.transform.localPosition = originPos;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Spawn point
-    // ──────────────────────────────────────────────────────────────────────────
+
     public void SetSpawnPoint(Vector3 point)
     {
         if (!IsServer) return;
@@ -310,9 +288,9 @@ public class PlayerController : NetworkBehaviour
         spawnPoint = point;
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    //  Death / Respawn
-    // ──────────────────────────────────────────────────────────────────────────
+
+    // Respawn
+
     public void Die()
     {
         if (!IsOwner) return;
@@ -328,8 +306,7 @@ public class PlayerController : NetworkBehaviour
         RespawnClientRpc(spawnPoint);
     }
 
-    // Ensures the owning client's rigidbody is snapped to the correct position
-    // and velocity is cleared so there's no desync after respawn.
+
     [ClientRpc]
     private void RespawnClientRpc(Vector3 position)
     {
