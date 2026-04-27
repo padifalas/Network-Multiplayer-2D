@@ -8,6 +8,9 @@ public class PlayerController : NetworkBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 6f;
     [SerializeField] private float jumpForce = 14f;
+    [SerializeField] private float acceleration  = 12f;   // how fast player reaches full speed
+    [SerializeField] private float deceleration = 18f;   // how fast player stops
+    [SerializeField] private float airAcceleration= 6f;    // less control in air
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
@@ -32,7 +35,7 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private Transform gunHand;
 
     public NetworkVariable<bool> ControlsFlipped = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> IsFrozen        = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> IsFrozen= new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private PlayerInputActions input;
     private Rigidbody2D rb;
@@ -47,10 +50,10 @@ public class PlayerController : NetworkBehaviour
     private void Awake()
     {
         if (player1SpawnPoint == null)
-            player1SpawnPoint = FindSceneSpawnPoint( "Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint", "P1Spawn");
+            player1SpawnPoint = FindSceneSpawnPoint("Player1SpawnPoint", "Player1Spawn", "P1SpawnPoint", "P1-SpawnPoint", "P1Spawn");
 
         if (player2SpawnPoint == null)
-            player2SpawnPoint = FindSceneSpawnPoint( "Player2SpawnPoint", "Player2Spawn", "P2SpawnPoint", "P2Spawn");
+            player2SpawnPoint = FindSceneSpawnPoint("Player2SpawnPoint", "Player2Spawn", "P2SpawnPoint", "P2Spawn");
     }
 
     private Transform FindSceneSpawnPoint(params string[] names)
@@ -83,7 +86,6 @@ public class PlayerController : NetworkBehaviour
         }
         else
         {
-            // Debug.LogWarning($"[PlayerController] No spawn point for {(isPlayerOne ? "P1" : "P2")} – using current position.", this);
             spawnPoint = transform.position;
         }
 
@@ -92,7 +94,6 @@ public class PlayerController : NetworkBehaviour
 
         IsFrozen.OnValueChanged += OnFrozenChanged;
 
-      
         if (!IsOwner) return;
 
         SetupInput();
@@ -104,23 +105,16 @@ public class PlayerController : NetworkBehaviour
         if (IsOwner) input?.Dispose();
     }
 
-    
-    //  Input setup –either player uses any keyboard/gamepad
-   
+
+    // input setup
+
     private void SetupInput()
     {
-        input = new PlayerInputActions();
-
-     
-        // can  use any connected keyboard or gamepad.
-        input.devices = null;
-
+        input          = new PlayerInputActions();
+        input.devices  = null;
         input.Player.Enable();
-
         input.Player.Jump.performed  += _ => jumpQueued = true;
         input.Player.Shoot.performed += _ => TryShoot();
-
-        // Debug.Log($"[for PlayerController script] Input ready for OwnerClientId={OwnerClientId}. " +  $"Gamepads={Gamepad.all.Count}, Keyboards detected via InputSystem.");
     }
 
 
@@ -129,7 +123,8 @@ public class PlayerController : NetworkBehaviour
         if (!IsOwner) return;
 
         moveInput  = input.Player.Move.ReadValue<Vector2>();
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        isGrounded = Physics2D.OverlapCircle(
+            groundCheck.position, groundCheckRadius, groundLayer);
     }
 
     private void FixedUpdate()
@@ -137,22 +132,36 @@ public class PlayerController : NetworkBehaviour
         if (!IsOwner) return;
 
         float speedMultiplier = IsFrozen.Value ? frozenSpeedMult : 1f;
-        float direction = ControlsFlipped.Value ? -1f : 1f;
-        float horizontal = moveInput.x * direction * moveSpeed * speedMultiplier;
+        float directionMult = ControlsFlipped.Value ? -1f : 1f;
+        float targetSpeed  = moveInput.x * directionMult * moveSpeed * speedMultiplier;
 
-        rb.linearVelocity = new Vector2(horizontal, rb.linearVelocity.y);
+        
+        float currentSpeed = rb.linearVelocity.x;
+        float accelRate;
 
-    
-        if (moveInput.x != 0) sr.flipX = horizontal < 0;
+        if (isGrounded)
+            accelRate = Mathf.Abs(targetSpeed) > 0.01f ? acceleration : deceleration;
+        else
+            accelRate = Mathf.Abs(targetSpeed) > 0.01f ? airAcceleration : deceleration * 0.5f;
 
-       
+        
+        float newHorizontal = Mathf.MoveTowards(
+            currentSpeed, targetSpeed, accelRate * Time.fixedDeltaTime);
+
+        rb.linearVelocity = new Vector2(newHorizontal, rb.linearVelocity.y);
+
+        // sprite flip
+        if (moveInput.x != 0) sr.flipX = newHorizontal < 0;
+
+        // gun hand flip
         if (gunHand != null)
         {
-            Vector3 s = gunHand.localScale;
-            gunHand.localScale = new Vector3(  sr.flipX ? -Mathf.Abs(s.x) : Mathf.Abs(s.x), s.y, s.z);
+            Vector3 s          = gunHand.localScale;
+            gunHand.localScale = new Vector3(
+                sr.flipX ? -Mathf.Abs(s.x) : Mathf.Abs(s.x), s.y, s.z);
         }
 
-        // Jump
+        // jump stuff
         if (jumpQueued && isGrounded)
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
 
@@ -165,7 +174,6 @@ public class PlayerController : NetworkBehaviour
         if (!IsServer) return;
         ControlsFlipped.Value = flipped;
     }
-
 
     public void EquipGun()
     {
@@ -236,7 +244,6 @@ public class PlayerController : NetworkBehaviour
         if (!current &&  freezeParticles.isPlaying) freezeParticles.Stop();
     }
 
-
     public void ApplyKnockback(Vector2 direction, float force)
     {
         if (!IsServer) return;
@@ -250,14 +257,14 @@ public class PlayerController : NetworkBehaviour
         if (!IsOwner) return;
         rb.linearVelocity = new Vector2(direction.x * force, force * 0.5f);
         StartCoroutine(CameraShakeRoutine());
-       
     }
 
     private IEnumerator CameraShakeRoutine()
     {
-        Camera cam = Camera.main;
-        Vector3 originPos  = cam.transform.localPosition;
-        float elapsed      = 0f;
+        Camera  cam       = Camera.main;
+        Vector3 originPos = cam.transform.localPosition;
+        float   elapsed   = 0f;
+
         const float duration  = 0.3f;
         const float magnitude = 0.15f;
 
@@ -265,14 +272,14 @@ public class PlayerController : NetworkBehaviour
         {
             float x = Random.Range(-1f, 1f) * magnitude;
             float y = Random.Range(-1f, 1f) * magnitude;
-            cam.transform.localPosition = new Vector3(originPos.x + x, originPos.y + y, originPos.z);
+            cam.transform.localPosition = new Vector3(
+                originPos.x + x, originPos.y + y, originPos.z);
             elapsed += Time.deltaTime;
             yield return null;
         }
 
         cam.transform.localPosition = originPos;
     }
-
 
     public void SetSpawnPoint(Vector3 point)
     {
@@ -289,7 +296,7 @@ public class PlayerController : NetworkBehaviour
     }
 
 
-    // Respawn
+    // respawn
 
     public void Die()
     {
@@ -305,7 +312,6 @@ public class PlayerController : NetworkBehaviour
         AudioManager.Singleton?.PlayDeath();
         RespawnClientRpc(spawnPoint);
     }
-
 
     [ClientRpc]
     private void RespawnClientRpc(Vector3 position)

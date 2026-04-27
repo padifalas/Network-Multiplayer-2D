@@ -157,11 +157,11 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 1.1489105, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -171,7 +171,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.52, y: 3.31}
+  m_Size: {x: 3.6267314, y: 3.31}
   m_EdgeRadius: 0
 --- !u!61 &5214753913889853498
 BoxCollider2D:
@@ -203,11 +203,11 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 1.0272373, y: 0}
+  m_Offset: {x: 0.034451157, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -217,7 +217,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 3.5854547, y: 3.31}
+  m_Size: {x: 1.4087918, y: 3.31}
   m_EdgeRadius: 0
 --- !u!114 &5251145192253278428
 MonoBehaviour:
@@ -257,7 +257,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Obstacle
   ShowTopMostFoldoutHeaderGroup: 1
-  obstacleType: 4
+  obstacleType: 5
   fireExpandScale: 2.5
   fireExpandSpeed: 3
   fireDetectRadius: 3
@@ -265,6 +265,9 @@ MonoBehaviour:
   sinkDetectRadius: 2
   sinkResetDelay: 2
   killboxTransform: {fileID: 0}
+  chandelierRb: {fileID: 0}
+  chandelierShakeDuration: 0.4
+  chandelierShakeMagnitude: 0.25
   wallMoveSpeed: 8
   wallChargeDelay: 0.3
   bookSpawnPoint: {fileID: 2782932646955706692}
